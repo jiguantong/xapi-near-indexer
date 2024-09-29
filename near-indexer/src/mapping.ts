@@ -1,5 +1,5 @@
 import { BigInt, log, near } from '@graphprotocol/graph-ts';
-import { Greeter, Greeting } from '../generated/schema';
+import { ReporterRequired, Response, PublishChainConfig, PublishEvent } from '../generated/schema';
 
 export function handleReceipt(receipt: near.ReceiptWithOutcome): void {
   const actions = receipt.receipt.actions;
