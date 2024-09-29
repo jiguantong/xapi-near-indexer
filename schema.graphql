@@ -1,11 +1,44 @@
-type Greeter @entity {
+type ReporterRequired @entity {
   id: ID!
-  name: String!
-  greetings: [Greeting!] @derivedFrom(field: "greeter")
+  quorum: Int!
+  threshold: Int!
 }
 
-type Greeting @entity {
+enum RequestStatus {
+  FETCHING,
+  DONE,
+  TIMEOUT,
+  PUBLISHED,
+}
+
+type Response @entity {
   id: ID!
-  greeter: Greeter!
-  timestamp: BigInt!
+  request_id: String!
+  reporters: String!
+  reporter_reward_addresses: [String!]!
+  started_at: BigInt!
+  updated_at: BigInt!
+  status: RequestStatus!
+  call_data: String!
+  result: String!
+  nonce: BigInt!
+  chain_id: BigInt!
+  reporter_required: ReporterRequired!
+}
+
+type PublishChainConfig @entity {
+  id: ID!
+  chain_id: BigInt!
+  xapi_address: String!
+  gas_limit: BigInt!
+  max_fee_per_gas: BigInt!
+  max_priority_fee_per_gas: BigInt!
+}
+
+type PublishEvent @entity {
+  id: ID!
+  request_id: String!
+  response: Response!
+  chain_config: PublishChainConfig!
+  signature: String!
 }

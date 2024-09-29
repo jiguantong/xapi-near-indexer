@@ -1,7 +1,7 @@
 {
-  "near-mainnet": {
+  "near-testnet": {
     "receipts": {
-      "startBlock": 50736511
+      "startBlock": 175145068
     }
   }
 }
