@@ -1,0 +1,70 @@
+type AggregatorConfigSet @entity(immutable: true) {
+  id: Bytes!
+  aggregator: String! # string
+  perReporterFee: BigInt! # uint256
+  publishFee: BigInt! # uint256
+  fulfillAddress: Bytes! # address
+  rewardAddress: Bytes! # address
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type AggregatorSuspended @entity(immutable: true) {
+  id: Bytes!
+  aggregator: String! # string
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type Fulfilled @entity(immutable: true) {
+  id: Bytes!
+  requestId: BigInt! # uint256
+  response_reporters: [Bytes!]! # address[]
+  response_result: Bytes! # bytes
+  status: Int! # uint8
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type OwnershipTransferStarted @entity(immutable: true) {
+  id: Bytes!
+  previousOwner: Bytes! # address
+  newOwner: Bytes! # address
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type OwnershipTransferred @entity(immutable: true) {
+  id: Bytes!
+  previousOwner: Bytes! # address
+  newOwner: Bytes! # address
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type RequestMade @entity(immutable: true) {
+  id: Bytes!
+  requestId: BigInt! # uint256
+  aggregator: String! # string
+  requestData: String! # string
+  requester: Bytes! # address
+  reporterRequired_quorum: Int! # uint8
+  reporterRequired_threshold: Int! # uint8
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
+
+type RewardsWithdrawn @entity(immutable: true) {
+  id: Bytes!
+  withdrawer: Bytes! # address
+  amount: BigInt! # uint256
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: Bytes!
+}
