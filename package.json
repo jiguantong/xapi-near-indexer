@@ -1,0 +1,28 @@
+{
+  "name": "@ringdao/xapi",
+  "version": "0.0.1",
+  "description": "XAPI offchain Project",
+  "private": true,
+  "author": "Darwinia Network <hello@darwinia.network>",
+  "license": "MIT",
+  "homepage": "https://github.com/ringecosystem/xapi-offchain",
+  "bugs": {
+    "url": "https://github.com/ringecosystem/xapi-offchain/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ringecosystem/xapi-offchain.git"
+  },
+  "scripts": {
+    "build:all": "lerna run build",
+    "test:all": "lerna run test",
+    "lint:all": "lerna run lint",
+    "publish:npm": "lerna publish from-package --loglevel=silly --no-private --no-verify-access --yes -- --verbose"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "devDependencies": {
+    "lerna": "^8.1.8"
+  }
+}
