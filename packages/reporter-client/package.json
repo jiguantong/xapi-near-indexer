@@ -20,7 +20,9 @@
     "axios": "^1.7.7",
     "chalk": "^4",
     "commander": "^12.1.0",
-    "near-api-js": "^5.0.0"
+    "near-api-js": "^5.0.0",
+    "reflect-metadata": "^0.2.2",
+    "typedi": "^0.10.0"
   },
   "devDependencies": {
     "@types/jest": "^29",
