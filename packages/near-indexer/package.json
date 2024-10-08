@@ -1,5 +1,5 @@
 {
-  "name": "xapi-near",
+  "name": "@ringdao/xapi-indexer-near",
   "version": "0.0.1",
   "private": true,
   "scripts": {

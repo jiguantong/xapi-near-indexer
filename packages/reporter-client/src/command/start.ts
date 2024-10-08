@@ -2,7 +2,11 @@ import { Service } from "typedi";
 import { setTimeout } from "timers/promises";
 import { GraphqlService } from "../services/graphql";
 
-export interface StartOptions {}
+import {logger} from "@ringdao/xapi-common"
+
+export interface StartOptions {
+  // targetChains:
+}
 
 @Service()
 export class XAPIExporterStarter {
@@ -20,7 +24,8 @@ export class XAPIExporterStarter {
   }
 
   private async run(options: StartOptions) {
-    const rms = await this.graphqlService.queryRequestMade();
-    console.log(rms, new Date());
+    // const rms = await this.graphqlService.queryRequestMade();
+    logger.debug(new Date().toString(), {target: 'reporter', breads: ['hello', 'x']});
+    logger.debug(new Date().toString(), {target: 'reporter', breads: ['hello', 'yyyy']});
   }
 }

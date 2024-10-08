@@ -1,14 +1,13 @@
 {
-  "name": "@ringdao/xapi-reporter-client",
+  "name": "@ringdao/xapi-common",
   "version": "0.0.1",
   "description": "",
+  "main": "dist/index.js",
   "publishConfig": {
     "access": "public"
   },
-  "main": "dist/main.js",
   "scripts": {
     "build": "shx rm -rf dist && tsc -b",
-    "start": "npm run build && node dist/main.js",
     "lint": "eslint . --ext .ts --fix",
     "posttest": "yarn lint",
     "test": "jest",
@@ -17,13 +16,8 @@
   },
   "dependencies": {
     "@stdlib/string-pad": "^0",
-    "axios": "^1.7.7",
     "chalk": "^4",
-    "commander": "^12.1.0",
-    "near-api-js": "^5.0.0",
-    "reflect-metadata": "^0.2.2",
-    "typedi": "^0.10.0",
-    "@ringdao/xapi-common": "0.0.1"
+    "winston": "^3"
   },
   "devDependencies": {
     "@types/jest": "^29",

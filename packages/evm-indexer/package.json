@@ -1,5 +1,5 @@
 {
-  "name": "xapi-evm-indexer",
+  "name": "@ringdao/xapi-indexer-evm",
   "version": "0.0.1",
   "private": true,
   "scripts": {
