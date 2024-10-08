@@ -1,0 +1,20 @@
+{
+  "name": "mpc-relayer",
+  "version": "0.0.1",
+  "main": "dist/main.js",
+  "license": "MIT",
+  "scripts": {
+    "build": "shx rm -rf dist && tsc -b",
+    "start": "yarn build && node dist/main.js"
+  },
+  "devDependencies": {
+    "shx": "^0.3.4",
+    "typescript": "^5.6.2"
+  },
+  "dependencies": {
+    "axios": "^1.7.7",
+    "commander": "^12.1.0",
+    "reflect-metadata": "^0.2.2",
+    "typedi": "^0.10.0"
+  }
+}
