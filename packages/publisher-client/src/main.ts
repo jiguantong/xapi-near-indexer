@@ -2,20 +2,20 @@ import 'reflect-metadata';
 
 import { Command } from 'commander';
 import { Container } from 'typedi';
-import { StartOptions, MPCRelayerStarter } from './command/start';
+import { StartOptions, PublisherStarter } from './command/start';
 
 const program = new Command();
 
 program
-    .name("xapi-mpc-relayer")
-    .description("XAPI MPC relayer")
+    .name("xapi-publisher")
+    .description("XAPI Publisher")
     .version("0.0.1");
 
 program
     .command("start")
-    .description("start XAPI MPC relayer")
+    .description("start XAPI Publisher")
     .action(async (options) => {
-        const c = Container.get(MPCRelayerStarter);
+        const c = Container.get(PublisherStarter);
         await c.start({} as StartOptions);
     });
 

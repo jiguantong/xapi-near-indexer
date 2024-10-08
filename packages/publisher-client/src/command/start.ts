@@ -7,7 +7,7 @@ export interface StartOptions {
 }
 
 @Service()
-export class MPCRelayerStarter {
+export class PublisherStarter {
 
     constructor(
         private graphqlService: GraphqlService,
