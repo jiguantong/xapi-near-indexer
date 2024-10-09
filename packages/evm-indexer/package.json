@@ -1,5 +1,5 @@
 {
-  "name": "xapi-evm",
+  "name": "@ringdao/xapi-indexer-evm",
   "license": "UNLICENSED",
   "scripts": {
     "codegen": "graph codegen",
