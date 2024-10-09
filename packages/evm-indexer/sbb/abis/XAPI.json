@@ -161,16 +161,6 @@
         "internalType": "address",
         "name": "requester",
         "type": "address"
-      },
-      {
-        "components": [
-          { "internalType": "uint8", "name": "quorum", "type": "uint8" },
-          { "internalType": "uint8", "name": "threshold", "type": "uint8" }
-        ],
-        "indexed": false,
-        "internalType": "struct ReporterRequired",
-        "name": "reporterRequired",
-        "type": "tuple"
       }
     ],
     "name": "RequestMade",
@@ -218,6 +208,7 @@
         "type": "uint256"
       },
       { "internalType": "uint256", "name": "publishFee", "type": "uint256" },
+      { "internalType": "uint8", "name": "quorum", "type": "uint8" },
       { "internalType": "bool", "name": "suspended", "type": "bool" }
     ],
     "stateMutability": "view",
@@ -262,16 +253,7 @@
         "name": "callbackFunction",
         "type": "bytes4"
       },
-      { "internalType": "string", "name": "aggregator", "type": "string" },
-      {
-        "components": [
-          { "internalType": "uint8", "name": "quorum", "type": "uint8" },
-          { "internalType": "uint8", "name": "threshold", "type": "uint8" }
-        ],
-        "internalType": "struct ReporterRequired",
-        "name": "reporterRequired",
-        "type": "tuple"
-      }
+      { "internalType": "string", "name": "aggregator", "type": "string" }
     ],
     "name": "makeRequest",
     "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
@@ -346,16 +328,7 @@
         "name": "response",
         "type": "tuple"
       },
-      { "internalType": "uint256", "name": "payment", "type": "uint256" },
-      {
-        "components": [
-          { "internalType": "uint8", "name": "quorum", "type": "uint8" },
-          { "internalType": "uint8", "name": "threshold", "type": "uint8" }
-        ],
-        "internalType": "struct ReporterRequired",
-        "name": "reporterRequired",
-        "type": "tuple"
-      }
+      { "internalType": "uint256", "name": "payment", "type": "uint256" }
     ],
     "stateMutability": "view",
     "type": "function"
@@ -390,7 +363,8 @@
         "name": "fulfillAddress",
         "type": "address"
       },
-      { "internalType": "address", "name": "rewardAddress", "type": "address" }
+      { "internalType": "address", "name": "rewardAddress", "type": "address" },
+      { "internalType": "uint8", "name": "quorum", "type": "uint8" }
     ],
     "name": "setAggregatorConfig",
     "outputs": [],

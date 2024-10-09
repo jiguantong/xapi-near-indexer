@@ -5,7 +5,7 @@ import { GraphqlService } from "../services/graphql";
 import {logger} from "@ringdao/xapi-common"
 
 export interface StartOptions {
-  // targetChains:
+  targetChains: string[]
 }
 
 @Service()

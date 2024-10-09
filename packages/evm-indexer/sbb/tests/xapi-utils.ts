@@ -144,8 +144,7 @@ export function createRequestMadeEvent(
   requestId: BigInt,
   aggregator: string,
   requestData: string,
-  requester: Address,
-  reporterRequired: ethereum.Tuple
+  requester: Address
 ): RequestMade {
   let requestMadeEvent = changetype<RequestMade>(newMockEvent())
 
@@ -168,12 +167,6 @@ export function createRequestMadeEvent(
   )
   requestMadeEvent.parameters.push(
     new ethereum.EventParam("requester", ethereum.Value.fromAddress(requester))
-  )
-  requestMadeEvent.parameters.push(
-    new ethereum.EventParam(
-      "reporterRequired",
-      ethereum.Value.fromTuple(reporterRequired)
-    )
   )
 
   return requestMadeEvent
