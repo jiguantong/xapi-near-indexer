@@ -1,68 +1,68 @@
 type AggregatorConfigSet @entity(immutable: true) {
-  id: Bytes!
+  id: String!
   aggregator: String! # string
   perReporterFee: BigInt! # uint256
   publishFee: BigInt! # uint256
-  fulfillAddress: Bytes! # address
-  rewardAddress: Bytes! # address
+  fulfillAddress: String! # address
+  rewardAddress: String! # address
   blockNumber: BigInt!
   blockTimestamp: BigInt!
-  transactionHash: Bytes!
+  transactionHash: String!
 }
 
 type AggregatorSuspended @entity(immutable: true) {
-  id: Bytes!
+  id: String!
   aggregator: String! # string
   blockNumber: BigInt!
   blockTimestamp: BigInt!
-  transactionHash: Bytes!
+  transactionHash: String!
 }
 
 type Fulfilled @entity(immutable: true) {
-  id: Bytes!
+  id: String!
   requestId: BigInt! # uint256
-  response_reporters: [Bytes!]! # address[]
-  response_result: Bytes! # bytes
+  response_reporters: [String!]! # address[]
+  response_result: String! # String
   status: Int! # uint8
   blockNumber: BigInt!
   blockTimestamp: BigInt!
-  transactionHash: Bytes!
+  transactionHash: String!
 }
 
 type OwnershipTransferStarted @entity(immutable: true) {
-  id: Bytes!
-  previousOwner: Bytes! # address
-  newOwner: Bytes! # address
+  id: String!
+  previousOwner: String! # address
+  newOwner: String! # address
   blockNumber: BigInt!
   blockTimestamp: BigInt!
-  transactionHash: Bytes!
+  transactionHash: String!
 }
 
 type OwnershipTransferred @entity(immutable: true) {
-  id: Bytes!
-  previousOwner: Bytes! # address
-  newOwner: Bytes! # address
+  id: String!
+  previousOwner: String! # address
+  newOwner: String! # address
   blockNumber: BigInt!
   blockTimestamp: BigInt!
-  transactionHash: Bytes!
+  transactionHash: String!
 }
 
 type RequestMade @entity(immutable: true) {
-  id: Bytes!
+  id: String!
   requestId: BigInt! # uint256
   aggregator: String! # string
   requestData: String! # string
-  requester: Bytes! # address
+  requester: String! # address
   blockNumber: BigInt!
   blockTimestamp: BigInt!
-  transactionHash: Bytes!
+  transactionHash: String!
 }
 
 type RewardsWithdrawn @entity(immutable: true) {
-  id: Bytes!
-  withdrawer: Bytes! # address
+  id: String!
+  withdrawer: String! # address
   amount: BigInt! # uint256
   blockNumber: BigInt!
   blockTimestamp: BigInt!
-  transactionHash: Bytes!
+  transactionHash: String!
 }
