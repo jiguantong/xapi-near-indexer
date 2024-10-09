@@ -11,7 +11,6 @@ export interface Response {
     status: string
     call_data: string
     result: string
-    nonce: string
     chain_id: string
 }
 
@@ -19,9 +18,6 @@ export interface PublishChainConfig {
     id: string
     chain_id: string
     xapi_address: string
-    gas_limit: string
-    max_fee_per_gas: string
-    max_priority_fee_per_gas: string
 }
 
 export interface Signature {
@@ -37,6 +33,10 @@ export interface PublishEvent {
     response: Response
     chain_config: PublishChainConfig
     signature: Signature
+    nonce: string
+    gas_limit: string
+    max_fee_per_gas: string
+    max_priority_fee_per_gas: string
 }
 
 export interface AggregatedEvent {
@@ -70,10 +70,7 @@ class ThegraphService extends AbstractGraphqlQuery {
             "id": "1727698419001766784",
             "chain_config": {
                 "chain_id": "0",
-                "gas_limit": "1000000",
                 "id": "1727698419001766784",
-                "max_fee_per_gas": "1000000",
-                "max_priority_fee_per_gas": "1000000",
                 "xapi_address": "1000000"
             },
             "request_id": "6277101735386680763835789423207666416102355444464034512855",
@@ -81,7 +78,6 @@ class ThegraphService extends AbstractGraphqlQuery {
                 "call_data": "0xae0ba13a0000000000000000ffffffffffffffffffffffffffffffffffffffffffffffd7",
                 "chain_id": "0",
                 "id": "1727698419001766784",
-                "nonce": "1",
                 "reporter_reward_addresses": [
                     "0x9f123456"
                 ],
@@ -99,7 +95,11 @@ class ThegraphService extends AbstractGraphqlQuery {
                 "id": "1727698419001766784",
                 "recovery_id": 0,
                 "s_scalar": "75733C4A46D28975DA4C20A8B18B987C6FF7833EB94818299BBEBF29D5B6A82E"
-            }
+            },
+            "nonce": "1",
+            "max_fee_per_gas": "1000000",
+            "max_priority_fee_per_gas": "1000000",
+            "gas_limit": "1000000"
         }
         return [
             publishEvent
