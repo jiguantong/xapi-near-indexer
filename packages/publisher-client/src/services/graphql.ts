@@ -54,11 +54,6 @@ export class GraphqlService extends AbstractGraphqlQuery {
 
     private readonly thegraph: ThegraphService = new ThegraphService();
 
-
-    constructor(endpoint: string) {
-        super();
-    }
-
     async queryPublishEvent(): Promise<PublishEvent[]> {
         return this.thegraph.queryPublishEvent();
     }
@@ -71,7 +66,7 @@ class ThegraphService extends AbstractGraphqlQuery {
             "chain_config": {
                 "chain_id": "0",
                 "id": "1727698419001766784",
-                "xapi_address": "1000000"
+                "xapi_address": "0x9F33a4809aA708d7a399fedBa514e0A0d15EfA85"
             },
             "request_id": "6277101735386680763835789423207666416102355444464034512855",
             "response": {
