@@ -1,19 +1,52 @@
+import axios from 'axios';
 import { Service } from 'typedi';
 
-export interface ReporterRequired {
-    quorum: number
-    threshold: number
+export interface Response {
+    id: string
+    request_id: string
+    valid_reporters: string[]
+    reporter_reward_addresses: string[]
+    started_at: string
+    updated_at: string
+    status: string
+    call_data: string
+    result: string
+    nonce: string
+    chain_id: string
 }
 
-export interface RequestMade {
-    requestId: bigint
-    aggregator: string
-    requestData: string
-    requester: string
+export interface PublishChainConfig {
+    id: string
+    chain_id: string
+    xapi_address: string
+    gas_limit: string
+    max_fee_per_gas: string
+    max_priority_fee_per_gas: string
+}
+
+export interface Signature {
+    id: string
+    big_r_affine_point: string
+    recovery_id: number
+    s_scalar: string
+}
+
+export interface PublishEvent {
+    id: string
+    request_id: string
+    response: Response
+    chain_config: PublishChainConfig
+    signature: Signature
+}
+
+export interface AggregatedEvent {
+    id: string
+    request_id: string
+    response: Response
 }
 
 abstract class AbstractGraphqlQuery {
-    abstract queryRequestMade(): Promise<RequestMade[]>;
+    abstract queryPublishEvent(): Promise<PublishEvent[]>;
 }
 
 @Service()
@@ -21,13 +54,55 @@ export class GraphqlService extends AbstractGraphqlQuery {
 
     private readonly thegraph: ThegraphService = new ThegraphService();
 
-    async queryRequestMade(): Promise<RequestMade[]> {
-        return this.thegraph.queryRequestMade();
+
+    constructor(endpoint: string) {
+        super();
+    }
+
+    async queryPublishEvent(): Promise<PublishEvent[]> {
+        return this.thegraph.queryPublishEvent();
     }
 }
 
 class ThegraphService extends AbstractGraphqlQuery {
-    async queryRequestMade(): Promise<RequestMade[]> {
-        return [];
+    async queryPublishEvent(): Promise<PublishEvent[]> {
+        const publishEvent = {
+            "id": "1727698419001766784",
+            "chain_config": {
+                "chain_id": "0",
+                "gas_limit": "1000000",
+                "id": "1727698419001766784",
+                "max_fee_per_gas": "1000000",
+                "max_priority_fee_per_gas": "1000000",
+                "xapi_address": "1000000"
+            },
+            "request_id": "6277101735386680763835789423207666416102355444464034512855",
+            "response": {
+                "call_data": "0xae0ba13a0000000000000000ffffffffffffffffffffffffffffffffffffffffffffffd7",
+                "chain_id": "0",
+                "id": "1727698419001766784",
+                "nonce": "1",
+                "reporter_reward_addresses": [
+                    "0x9f123456"
+                ],
+                "request_id": "6277101735386680763835789423207666416102355444464034512855",
+                "result": "test-result",
+                "started_at": "1727698382505495116",
+                "status": "PUBLISHED",
+                "updated_at": "1727698384582199258",
+                "valid_reporters": [
+                    "guantong.testnet"
+                ]
+            },
+            "signature": {
+                "big_r_affine_point": "02A9E29B167C1CBB48E996CD0BD9477A7B23BF4B18EACA14A5DA02E47956C33FC4",
+                "id": "1727698419001766784",
+                "recovery_id": 0,
+                "s_scalar": "75733C4A46D28975DA4C20A8B18B987C6FF7833EB94818299BBEBF29D5B6A82E"
+            }
+        }
+        return [
+            publishEvent
+        ];
     }
 }

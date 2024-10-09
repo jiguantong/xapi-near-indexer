@@ -61,7 +61,7 @@ function handlePublish(logs: string[], blockHeader: near.BlockHeader): void {
   if (publishEvent == null) {
     publishEvent = new PublishEvent(`${nanoId}`);
     publishEvent.request_id = request_id;
-    publishEvent.response = request_id;
+    publishEvent.response = nanoId;
     publishEvent.chain_config = nanoId;
     publishEvent.signature = nanoId;
     publishEvent.save();
