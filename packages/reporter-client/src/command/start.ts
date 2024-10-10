@@ -1,11 +1,19 @@
 import { Service } from "typedi";
 import { setTimeout } from "timers/promises";
-import { GraphqlService } from "../services/graphql";
+import { GraphqlQuery, GraphqlService } from "../services/graphql";
 
-import {logger} from "@ringdao/xapi-common"
+import { logger, XAPIConfig } from "@ringdao/xapi-common";
+import { HelixChainConf } from "@helixbridge/helixconf";
 
-export interface StartOptions {
-  targetChains: string[]
+
+export interface BaseStartOptions {}
+
+export interface StartOptions extends BaseStartOptions {
+  targetChains: HelixChainConf[];
+}
+
+export interface ReporterLifecycle extends StartOptions {
+  targetChain: HelixChainConf;
 }
 
 @Service()
@@ -13,19 +21,33 @@ export class XAPIExporterStarter {
   constructor(private graphqlService: GraphqlService) {}
 
   async start(options: StartOptions) {
+    // const ge = config.get("graphql.endpoint");
+    // console.log(config);
     while (true) {
-      try {
-        await this.run(options);
-        await setTimeout(1000);
-      } catch (e: any) {
-        console.error(e);
+      for (const chain of options.targetChains) {
+        try {
+          await this.run({
+            ...options,
+            targetChain: chain,
+          });
+        } catch (e: any) {
+          console.error(e);
+        }
       }
+      await setTimeout(1000);
     }
   }
 
-  private async run(options: StartOptions) {
-    // const rms = await this.graphqlService.queryRequestMade();
-    logger.debug(new Date().toString(), {target: 'reporter', breads: ['hello', 'x']});
-    logger.debug(new Date().toString(), {target: 'reporter', breads: ['hello', 'yyyy']});
+  private async run(lifecycle: ReporterLifecycle) {
+    const {targetChain} = lifecycle;
+    const query: GraphqlQuery = {
+      endpoint: XAPIConfig.graphql.endpoint(targetChain.code),
+    };
+    console.log(query);
+    const rms = await this.graphqlService.queryRequestMade(query);
+    logger.debug(lifecycle.targetChain.code, {
+      target: "reporter",
+      breads: ["hello", "x"],
+    });
   }
 }

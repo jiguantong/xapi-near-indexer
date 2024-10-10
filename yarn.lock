@@ -594,6 +594,11 @@
   dependencies:
     assemblyscript "0.19.10"
 
+"@helixbridge/helixconf@^1.1.16":
+  version "1.1.16"
+  resolved "https://registry.yarnpkg.com/@helixbridge/helixconf/-/helixconf-1.1.16.tgz#71663b129439ff38813450d586d4c30fb52e3920"
+  integrity sha512-HsG60bn7JA8wEyarETeTj/Ox7uOhji1+4YKxUACOkXDaEPlLV2yoT4LAjRbcsBO9r1wlhWdIA7JI6w15H7X/jQ==
+
 "@humanwhocodes/config-array@^0.13.0":
   version "0.13.0"
   resolved "https://registry.npmjs.org/@humanwhocodes/config-array/-/config-array-0.13.0.tgz"
@@ -3815,6 +3820,13 @@ concat-stream@^2.0.0:
     inherits "^2.0.3"
     readable-stream "^3.0.2"
     typedarray "^0.0.6"
+
+config@^3.3.12:
+  version "3.3.12"
+  resolved "https://registry.yarnpkg.com/config/-/config-3.3.12.tgz#a10ae66efcc3e48c1879fbb657c86c4ef6c7b25e"
+  integrity sha512-Vmx389R/QVM3foxqBzXO8t2tUikYZP64Q6vQxGrsMpREeJc/aWRnPRERXWsYzOHAumx/AOoILWe6nU3ZJL+6Sw==
+  dependencies:
+    json5 "^2.2.3"
 
 console-control-strings@^1.1.0:
   version "1.1.0"

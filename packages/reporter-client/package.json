@@ -23,7 +23,8 @@
     "near-api-js": "^5.0.0",
     "reflect-metadata": "^0.2.2",
     "typedi": "^0.10.0",
-    "@ringdao/xapi-common": "0.0.1"
+    "@ringdao/xapi-common": "0.0.1",
+    "@helixbridge/helixconf": "^1.1.16"
   },
   "devDependencies": {
     "@types/jest": "^29",
