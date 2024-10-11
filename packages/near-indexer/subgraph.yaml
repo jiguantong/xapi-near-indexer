@@ -12,7 +12,7 @@ dataSources:
       accounts:
         suffixes:
           - 'guantong.testnet'
-      startBlock: 176356862
+      startBlock: 176504258
     mapping:
       apiVersion: 0.0.6
       language: wasm/assemblyscript

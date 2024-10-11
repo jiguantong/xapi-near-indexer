@@ -6,7 +6,6 @@ type Response @entity {
   started_at: BigInt!
   updated_at: BigInt!
   status: String!
-  call_data: String
   result: String!
   chain_id: BigInt!
 }
@@ -15,6 +14,18 @@ type PublishChainConfig @entity {
   id: ID!
   chain_id: BigInt!
   xapi_address: String!
+  reporters_fee: BigInt!
+  publish_fee: BigInt!
+  reward_address: String!
+  version: BigInt!
+}
+
+type MpcOptions @entity {
+  id: ID!
+  nonce: BigInt!
+  gas_limit: BigInt!
+  max_fee_per_gas: BigInt!
+  max_priority_fee_per_gas: BigInt!
 }
 
 type Signature @entity {
@@ -28,16 +39,30 @@ type PublishEvent @entity {
   id: ID!
   request_id: String!
   response: Response!
-  chain_config: PublishChainConfig!
+  publish_chain_config: PublishChainConfig!
+  call_data: String!
   signature: Signature!
-  nonce: BigInt!
-  gas_limit: BigInt!
-  max_fee_per_gas: BigInt!
-  max_priority_fee_per_gas: BigInt!
+  mpc_options: MpcOptions!
 }
 
 type AggregatedEvent @entity {
   id: ID!
   request_id: String!
   response: Response!
+}
+
+type SetPublishChainConfigEvent @entity {
+  id: ID!
+  publish_chain_config: PublishChainConfig!
+}
+
+type SyncPublishChainConfigEvent @entity {
+  id: ID!
+  chain_id: BigInt!
+  xapi_address: String!
+  version: BigInt!
+  publish_chain_config: PublishChainConfig!
+  call_data: String!
+  signature: Signature!
+  mpc_options: MpcOptions!
 }

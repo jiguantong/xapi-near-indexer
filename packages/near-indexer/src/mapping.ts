@@ -1,5 +1,5 @@
 import { BigInt, log, near, json, TypedMap, JSONValue, JSONValueKind } from '@graphprotocol/graph-ts';
-import { Response, PublishChainConfig, PublishEvent, Signature, AggregatedEvent } from '../generated/schema';
+import { Response, PublishChainConfig, PublishEvent, Signature, AggregatedEvent, SetPublishChainConfigEvent, MpcOptions, SyncPublishChainConfigEvent } from '../generated/schema';
 
 export function handleReceipt(receipt: near.ReceiptWithOutcome): void {
   const actions = receipt.receipt.actions;
@@ -25,6 +25,10 @@ function handleAction(
     handlePublish(logs, blockHeader);
   } else if (functionCall.methodName == "post_aggregate_callback") {
     handleAggregated(logs, blockHeader);
+  } else if (functionCall.methodName == "set_publish_chain_config") {
+    handleSetPublishChainConfig(logs, blockHeader);
+  } else if (functionCall.methodName == "sync_publish_config_to_remote") {
+    handleSyncPublishChainConfig(logs, blockHeader);
   }
 }
 
@@ -45,9 +49,10 @@ function handlePublish(logs: string[], blockHeader: near.BlockHeader): void {
     response.save();
   }
 
-  let chainConfig = PublishChainConfig.load(nanoId);
+  const _chainConfigData = _eventData.mustGet("chain_config").toObject()
+  let chainConfig = PublishChainConfig.load(_chainConfigData.mustGet("version").toString());
   if (chainConfig == null) {
-    chainConfig = parseChainConfig(_eventData, nanoId);
+    chainConfig = parseChainConfig(_chainConfigData);
     chainConfig.save();
   }
 
@@ -57,17 +62,22 @@ function handlePublish(logs: string[], blockHeader: near.BlockHeader): void {
     signature.save();
   }
 
+  const _mpcOptionsData = _eventData.mustGet("mpc_options").toObject();
+  let mpcOptions = MpcOptions.load(nanoId);
+  if (mpcOptions == null) {
+    mpcOptions = parseMpcOptions(_mpcOptionsData, nanoId);
+    mpcOptions.save();
+  }
+
   let publishEvent = PublishEvent.load(nanoId);
   if (publishEvent == null) {
     publishEvent = new PublishEvent(`${nanoId}`);
     publishEvent.request_id = request_id;
     publishEvent.response = nanoId;
-    publishEvent.chain_config = nanoId;
+    publishEvent.publish_chain_config = nanoId;
     publishEvent.signature = nanoId;
-    publishEvent.nonce = BigInt.fromString(_eventData.mustGet("nonce").toString());
-    publishEvent.gas_limit = BigInt.fromString(_eventData.mustGet("gas_limit").toString());
-    publishEvent.max_fee_per_gas = BigInt.fromString(_eventData.mustGet("max_fee_per_gas").toString());
-    publishEvent.max_priority_fee_per_gas = BigInt.fromString(_eventData.mustGet("max_priority_fee_per_gas").toString());
+    publishEvent.mpc_options = nanoId;
+    publishEvent.call_data = _eventData.mustGet("call_data").toString();
     publishEvent.save();
   } else {
     log.debug("Publish event already exists: {}", [request_id]);
@@ -97,6 +107,76 @@ function handleAggregated(logs: string[], blockHeader: near.BlockHeader): void {
     aggregatedEvent.save();
   } else {
     log.debug("Aggregated event already exists: {}", [request_id]);
+  }
+}
+
+function handleSetPublishChainConfig(logs: string[], blockHeader: near.BlockHeader): void {
+  const _event = extractEvent("SetPublishChainConfig", logs);
+  if (!_event) {
+    return;
+  }
+  const nanoId = `${blockHeader.timestampNanosec}`;
+  const _eventData = _event.mustGet("data").toObject();
+
+  const _chainConfigData = _eventData.mustGet("chain_config").toObject()
+  let chainConfig = PublishChainConfig.load(_chainConfigData.mustGet("version").toString());
+  if (chainConfig == null) {
+    chainConfig = parseChainConfig(_chainConfigData);
+    chainConfig.save();
+  }
+
+  let setPublishChainConfigEvent = SetPublishChainConfigEvent.load(nanoId);
+  if (setPublishChainConfigEvent == null) {
+    setPublishChainConfigEvent = new SetPublishChainConfigEvent(nanoId);
+    setPublishChainConfigEvent.publish_chain_config = nanoId;
+    setPublishChainConfigEvent.save();
+  } else {
+    log.debug("SetPublishChainConfigEvent event already exists: {}", [nanoId]);
+  }
+}
+
+function handleSyncPublishChainConfig(logs: string[], blockHeader: near.BlockHeader): void {
+  const _event = extractEvent("SyncPublishChainConfig", logs);
+  if (!_event) {
+    return;
+  }
+
+  const nanoId = `${blockHeader.timestampNanosec}`;
+  const _eventData = _event.mustGet("data").toObject();
+
+  const _version = _eventData.mustGet("version").toString();
+  let publishChainConfig = PublishChainConfig.load(_version);
+  if (publishChainConfig == null) {
+    log.error("Can't handleSyncPublishChainConfig, PublishChainConfig does not exist, version: {}", [_version]);
+    return;
+  }
+
+  let signature = Signature.load(nanoId);
+  if (signature == null) {
+    signature = parseSignature(_eventData, nanoId);
+    signature.save();
+  }
+
+  const _mpcOptionsData = _eventData.mustGet("mpc_options").toObject();
+  let mpcOptions = MpcOptions.load(nanoId);
+  if (mpcOptions == null) {
+    mpcOptions = parseMpcOptions(_mpcOptionsData, nanoId);
+    mpcOptions.save();
+  }
+
+  let syncPublishChainConfigEvent = SyncPublishChainConfigEvent.load(nanoId);
+  if (syncPublishChainConfigEvent == null) {
+    syncPublishChainConfigEvent = new SyncPublishChainConfigEvent(`${nanoId}`);
+    syncPublishChainConfigEvent.publish_chain_config = _version;
+    syncPublishChainConfigEvent.chain_id = BigInt.fromString(_eventData.mustGet("chain_id").toString());
+    syncPublishChainConfigEvent.xapi_address = _eventData.mustGet("xapi_address").toString();
+    syncPublishChainConfigEvent.version = BigInt.fromString(_eventData.mustGet("xapi_address").toString());
+    syncPublishChainConfigEvent.call_data = _eventData.mustGet("call_data").toString();
+    syncPublishChainConfigEvent.signature = nanoId;
+    syncPublishChainConfigEvent.mpc_options = nanoId;
+    syncPublishChainConfigEvent.save();
+  } else {
+    log.debug("SyncPublishChainConfig event already exists: {}", [nanoId]);
   }
 }
 
@@ -133,18 +213,20 @@ function parseResponse(eventData: TypedMap<string, JSONValue>, nanoId: string): 
   response.started_at = BigInt.fromString(eventData.mustGet("started_at").toString());
   response.updated_at = BigInt.fromString(eventData.mustGet("updated_at").toString());
   response.status = eventData.mustGet("status").toString();
-  response.call_data = eventData.get("call_data") ? eventData.mustGet("call_data").toString() : null;
   response.result = eventData.mustGet("result").toString();
   response.chain_id = BigInt.fromString(eventData.mustGet("chain_id").toString());
   return response;
 }
 
-function parseChainConfig(eventData: TypedMap<string, JSONValue>, nanoId: string): PublishChainConfig {
-  log.debug("!!!### parseChainConfig, kind: {}", [eventData.mustGet("chain_config").kind.toString()]);
-  const chainConfigJson = eventData.mustGet("chain_config").toObject();
-  const chainConfig = new PublishChainConfig(nanoId);
+function parseChainConfig(chainConfigJson: TypedMap<string, JSONValue>): PublishChainConfig {
+  log.debug("!!!### parseChainConfig", []);
+  const chainConfig = new PublishChainConfig(chainConfigJson.mustGet("version").toString());
   chainConfig.chain_id = BigInt.fromString(chainConfigJson.mustGet("chain_id").toString());
   chainConfig.xapi_address = chainConfigJson.mustGet("xapi_address").toString();
+  chainConfig.reporters_fee = BigInt.fromString(chainConfigJson.mustGet("reporters_fee").toString());
+  chainConfig.publish_fee = BigInt.fromString(chainConfigJson.mustGet("publish_fee").toString());
+  chainConfig.reward_address = chainConfigJson.mustGet("reward_address").toString();
+  chainConfig.version = BigInt.fromString(chainConfigJson.mustGet("version").toString());
   return chainConfig;
 }
 
@@ -156,4 +238,14 @@ function parseSignature(eventData: TypedMap<string, JSONValue>, nanoId: string):
   signature.recovery_id = signatureJson.mustGet("recovery_id").toI64() as i32;
   signature.s_scalar = signatureJson.mustGet("s").toObject().mustGet("scalar").toString();
   return signature;
+}
+
+function parseMpcOptions(mpcOptionsJson: TypedMap<string, JSONValue>, nanoId: string): MpcOptions {
+  log.debug("!!!### parseMpcOptions", []);
+  const mpcOptions = new MpcOptions(nanoId);
+  mpcOptions.nonce = BigInt.fromString(mpcOptionsJson.mustGet("nonce").toString());
+  mpcOptions.gas_limit = BigInt.fromString(mpcOptionsJson.mustGet("gas_limit").toString());
+  mpcOptions.max_fee_per_gas = BigInt.fromString(mpcOptionsJson.mustGet("max_fee_per_gas").toString());
+  mpcOptions.max_priority_fee_per_gas = BigInt.fromString(mpcOptionsJson.mustGet("max_priority_fee_per_gas").toString());
+  return mpcOptions;
 }
