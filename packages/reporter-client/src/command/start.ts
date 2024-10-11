@@ -1,6 +1,6 @@
 import { Service } from "typedi";
 import { setTimeout } from "timers/promises";
-import { GraphqlQuery, GraphqlService } from "../services/graphql";
+import { GraphqlQuery, EvmGraphqlService, NearGraphqlService } from "../services/graphql";
 
 import { logger, XAPIConfig } from "@ringdao/xapi-common";
 import { HelixChainConf } from "@helixbridge/helixconf";
@@ -18,7 +18,10 @@ export interface ReporterLifecycle extends StartOptions {
 
 @Service()
 export class XAPIExporterStarter {
-  constructor(private graphqlService: GraphqlService) {}
+  constructor(
+    private evmGraphqlService: EvmGraphqlService,
+    private nearGraphqlService: NearGraphqlService,
+  ) {}
 
   async start(options: StartOptions) {
     // const ge = config.get("graphql.endpoint");
@@ -44,7 +47,7 @@ export class XAPIExporterStarter {
       endpoint: XAPIConfig.graphql.endpoint(targetChain.code),
     };
     console.log(query);
-    const rms = await this.graphqlService.queryRequestMade(query);
+    const rms = await this.evmGraphqlService.queryRequestMade(query);
     logger.debug(lifecycle.targetChain.code, {
       target: "reporter",
       breads: ["hello", "x"],

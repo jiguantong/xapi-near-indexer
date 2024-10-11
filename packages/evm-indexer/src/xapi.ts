@@ -66,6 +66,12 @@ export function handleFulfilled(event: FulfilledEvent): void {
   entity.transactionHash = event.transaction.hash.toHexString().toLowerCase()
 
   entity.save()
+
+  const rm = RequestMade.load(entity.requestId.toString());
+  if (rm) {
+    rm.fulfilled = 1;
+    rm.save();
+  }
 }
 
 export function handleOwnershipTransferStarted(
@@ -102,7 +108,7 @@ export function handleOwnershipTransferred(
 
 export function handleRequestMade(event: RequestMadeEvent): void {
   let entity = new RequestMade(
-    event.transaction.hash.concatI32(event.logIndex.toI32()).toHexString().toLowerCase()
+    event.params.requestId.toString()
   )
   entity.requestId = event.params.requestId
   entity.aggregator = event.params.aggregator
@@ -112,6 +118,8 @@ export function handleRequestMade(event: RequestMadeEvent): void {
   entity.blockNumber = event.block.number
   entity.blockTimestamp = event.block.timestamp
   entity.transactionHash = event.transaction.hash.toHexString().toLowerCase()
+
+  entity.fulfilled = 0;
 
   entity.save()
 }

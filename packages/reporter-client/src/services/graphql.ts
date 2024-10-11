@@ -17,21 +17,18 @@ export interface RequestMade {
 }
 
 abstract class AbstractGraphqlService {
-  abstract queryRequestMade(query: GraphqlQuery): Promise<RequestMade[]>;
+
 }
 
 @Service()
-export class GraphqlService extends AbstractGraphqlService {
-
-  private readonly thegraph: ThegraphService = new ThegraphService();
+export class EvmGraphqlService extends AbstractGraphqlService {
 
   async queryRequestMade(query: GraphqlQuery): Promise<RequestMade[]> {
-    return this.thegraph.queryRequestMade(query);
+    return []
   }
 }
 
-class ThegraphService extends AbstractGraphqlService {
-  async queryRequestMade(query: GraphqlQuery): Promise<RequestMade[]> {
-    return [];
-  }
+@Service()
+export class NearGraphqlService extends AbstractGraphqlService {
+
 }
