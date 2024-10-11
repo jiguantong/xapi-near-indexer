@@ -6,7 +6,7 @@ import {
   beforeAll,
   afterAll
 } from "matchstick-as/assembly/index"
-import { BigInt, Address } from "@graphprotocol/graph-ts"
+import { Address, BigInt } from "@graphprotocol/graph-ts"
 import { AggregatorConfigSet } from "../generated/schema"
 import { AggregatorConfigSet as AggregatorConfigSetEvent } from "../generated/XAPI/XAPI"
 import { handleAggregatorConfigSet } from "../src/xapi"
@@ -17,20 +17,20 @@ import { createAggregatorConfigSetEvent } from "./xapi-utils"
 
 describe("Describe entity assertions", () => {
   beforeAll(() => {
-    let aggregator = "Example string value"
-    let perReporterFee = BigInt.fromI32(234)
-    let publishFee = BigInt.fromI32(234)
-    let fulfillAddress = Address.fromString(
+    let exAggregator = Address.fromString(
       "0x0000000000000000000000000000000000000001"
     )
+    let reportersFee = BigInt.fromI32(234)
+    let publishFee = BigInt.fromI32(234)
+    let aggregator = "Example string value"
     let rewardAddress = Address.fromString(
       "0x0000000000000000000000000000000000000001"
     )
     let newAggregatorConfigSetEvent = createAggregatorConfigSetEvent(
-      aggregator,
-      perReporterFee,
+      exAggregator,
+      reportersFee,
       publishFee,
-      fulfillAddress,
+      aggregator,
       rewardAddress
     )
     handleAggregatorConfigSet(newAggregatorConfigSetEvent)
@@ -50,13 +50,13 @@ describe("Describe entity assertions", () => {
     assert.fieldEquals(
       "AggregatorConfigSet",
       "0xa16081f360e3847006db660bae1c6d1b2e17ec2a-1",
-      "aggregator",
-      "Example string value"
+      "exAggregator",
+      "0x0000000000000000000000000000000000000001"
     )
     assert.fieldEquals(
       "AggregatorConfigSet",
       "0xa16081f360e3847006db660bae1c6d1b2e17ec2a-1",
-      "perReporterFee",
+      "reportersFee",
       "234"
     )
     assert.fieldEquals(
@@ -68,8 +68,8 @@ describe("Describe entity assertions", () => {
     assert.fieldEquals(
       "AggregatorConfigSet",
       "0xa16081f360e3847006db660bae1c6d1b2e17ec2a-1",
-      "fulfillAddress",
-      "0x0000000000000000000000000000000000000001"
+      "aggregator",
+      "Example string value"
     )
     assert.fieldEquals(
       "AggregatorConfigSet",

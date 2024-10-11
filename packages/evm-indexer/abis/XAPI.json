@@ -19,14 +19,14 @@
     "inputs": [
       {
         "indexed": true,
-        "internalType": "string",
-        "name": "aggregator",
-        "type": "string"
+        "internalType": "address",
+        "name": "exAggregator",
+        "type": "address"
       },
       {
         "indexed": false,
         "internalType": "uint256",
-        "name": "perReporterFee",
+        "name": "reportersFee",
         "type": "uint256"
       },
       {
@@ -37,9 +37,9 @@
       },
       {
         "indexed": false,
-        "internalType": "address",
-        "name": "fulfillAddress",
-        "type": "address"
+        "internalType": "string",
+        "name": "aggregator",
+        "type": "string"
       },
       {
         "indexed": false,
@@ -54,6 +54,12 @@
   {
     "anonymous": false,
     "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "exAggregator",
+        "type": "address"
+      },
       {
         "indexed": true,
         "internalType": "string",
@@ -193,22 +199,13 @@
     "type": "function"
   },
   {
-    "inputs": [{ "internalType": "string", "name": "", "type": "string" }],
+    "inputs": [{ "internalType": "address", "name": "", "type": "address" }],
     "name": "aggregatorConfigs",
     "outputs": [
-      {
-        "internalType": "address",
-        "name": "fulfillAddress",
-        "type": "address"
-      },
+      { "internalType": "string", "name": "aggregator", "type": "string" },
       { "internalType": "address", "name": "rewardAddress", "type": "address" },
-      {
-        "internalType": "uint256",
-        "name": "perReporterFee",
-        "type": "uint256"
-      },
+      { "internalType": "uint256", "name": "reportersFee", "type": "uint256" },
       { "internalType": "uint256", "name": "publishFee", "type": "uint256" },
-      { "internalType": "uint8", "name": "quorum", "type": "uint8" },
       { "internalType": "bool", "name": "suspended", "type": "bool" }
     ],
     "stateMutability": "view",
@@ -253,7 +250,7 @@
         "name": "callbackFunction",
         "type": "bytes4"
       },
-      { "internalType": "string", "name": "aggregator", "type": "string" }
+      { "internalType": "address", "name": "exAggregator", "type": "address" }
     ],
     "name": "makeRequest",
     "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
@@ -310,11 +307,7 @@
         "name": "status",
         "type": "uint8"
       },
-      {
-        "internalType": "address",
-        "name": "fulfillAddress",
-        "type": "address"
-      },
+      { "internalType": "address", "name": "exAggregator", "type": "address" },
       {
         "components": [
           {
@@ -352,19 +345,9 @@
   {
     "inputs": [
       { "internalType": "string", "name": "aggregator", "type": "string" },
-      {
-        "internalType": "uint256",
-        "name": "perReporterFee",
-        "type": "uint256"
-      },
+      { "internalType": "uint256", "name": "reportersFee", "type": "uint256" },
       { "internalType": "uint256", "name": "publishFee", "type": "uint256" },
-      {
-        "internalType": "address",
-        "name": "fulfillAddress",
-        "type": "address"
-      },
-      { "internalType": "address", "name": "rewardAddress", "type": "address" },
-      { "internalType": "uint8", "name": "quorum", "type": "uint8" }
+      { "internalType": "address", "name": "rewardAddress", "type": "address" }
     ],
     "name": "setAggregatorConfig",
     "outputs": [],
@@ -373,7 +356,7 @@
   },
   {
     "inputs": [
-      { "internalType": "string", "name": "aggregator", "type": "string" }
+      { "internalType": "address", "name": "exAggregator", "type": "address" }
     ],
     "name": "suspendAggregator",
     "outputs": [],

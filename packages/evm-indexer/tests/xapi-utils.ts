@@ -1,5 +1,5 @@
 import { newMockEvent } from "matchstick-as"
-import { ethereum, BigInt, Address } from "@graphprotocol/graph-ts"
+import { ethereum, Address, BigInt } from "@graphprotocol/graph-ts"
 import {
   AggregatorConfigSet,
   AggregatorSuspended,
@@ -11,10 +11,10 @@ import {
 } from "../generated/XAPI/XAPI"
 
 export function createAggregatorConfigSetEvent(
-  aggregator: string,
-  perReporterFee: BigInt,
+  exAggregator: Address,
+  reportersFee: BigInt,
   publishFee: BigInt,
-  fulfillAddress: Address,
+  aggregator: string,
   rewardAddress: Address
 ): AggregatorConfigSet {
   let aggregatorConfigSetEvent = changetype<AggregatorConfigSet>(newMockEvent())
@@ -22,12 +22,15 @@ export function createAggregatorConfigSetEvent(
   aggregatorConfigSetEvent.parameters = new Array()
 
   aggregatorConfigSetEvent.parameters.push(
-    new ethereum.EventParam("aggregator", ethereum.Value.fromString(aggregator))
+    new ethereum.EventParam(
+      "exAggregator",
+      ethereum.Value.fromAddress(exAggregator)
+    )
   )
   aggregatorConfigSetEvent.parameters.push(
     new ethereum.EventParam(
-      "perReporterFee",
-      ethereum.Value.fromUnsignedBigInt(perReporterFee)
+      "reportersFee",
+      ethereum.Value.fromUnsignedBigInt(reportersFee)
     )
   )
   aggregatorConfigSetEvent.parameters.push(
@@ -37,10 +40,7 @@ export function createAggregatorConfigSetEvent(
     )
   )
   aggregatorConfigSetEvent.parameters.push(
-    new ethereum.EventParam(
-      "fulfillAddress",
-      ethereum.Value.fromAddress(fulfillAddress)
-    )
+    new ethereum.EventParam("aggregator", ethereum.Value.fromString(aggregator))
   )
   aggregatorConfigSetEvent.parameters.push(
     new ethereum.EventParam(
@@ -53,12 +53,19 @@ export function createAggregatorConfigSetEvent(
 }
 
 export function createAggregatorSuspendedEvent(
+  exAggregator: Address,
   aggregator: string
 ): AggregatorSuspended {
   let aggregatorSuspendedEvent = changetype<AggregatorSuspended>(newMockEvent())
 
   aggregatorSuspendedEvent.parameters = new Array()
 
+  aggregatorSuspendedEvent.parameters.push(
+    new ethereum.EventParam(
+      "exAggregator",
+      ethereum.Value.fromAddress(exAggregator)
+    )
+  )
   aggregatorSuspendedEvent.parameters.push(
     new ethereum.EventParam("aggregator", ethereum.Value.fromString(aggregator))
   )

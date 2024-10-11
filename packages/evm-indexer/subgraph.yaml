@@ -8,9 +8,9 @@ dataSources:
     name: XAPI
     network: sepolia
     source:
-      address: "0xcedBd5b942c37870D172fEF4FC1C568C0aB8c038"
+      address: "0x6984ebE378F8cb815546Cb68a98807C1fA121A81"
       abi: XAPI
-      startBlock: 6842148
+      startBlock: 6849034
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -27,9 +27,9 @@ dataSources:
         - name: XAPI
           file: ./abis/XAPI.json
       eventHandlers:
-        - event: AggregatorConfigSet(indexed string,uint256,uint256,address,address)
+        - event: AggregatorConfigSet(indexed address,uint256,uint256,string,address)
           handler: handleAggregatorConfigSet
-        - event: AggregatorSuspended(indexed string)
+        - event: AggregatorSuspended(indexed address,indexed string)
           handler: handleAggregatorSuspended
         - event: Fulfilled(indexed uint256,(address[],bytes),indexed uint8)
           handler: handleFulfilled

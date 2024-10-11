@@ -1,9 +1,9 @@
 type AggregatorConfigSet @entity(immutable: true) {
   id: String!
-  aggregator: String! # string
-  perReporterFee: BigInt! # uint256
+  exAggregator: String! # address
+  reportersFee: BigInt! # uint256
   publishFee: BigInt! # uint256
-  fulfillAddress: String! # address
+  aggregator: String! # string
   rewardAddress: String! # address
   blockNumber: BigInt!
   blockTimestamp: BigInt!
@@ -12,6 +12,7 @@ type AggregatorConfigSet @entity(immutable: true) {
 
 type AggregatorSuspended @entity(immutable: true) {
   id: String!
+  exAggregator: String! # address
   aggregator: String! # string
   blockNumber: BigInt!
   blockTimestamp: BigInt!

@@ -23,10 +23,10 @@ export function handleAggregatorConfigSet(
   let entity = new AggregatorConfigSet(
     event.transaction.hash.concatI32(event.logIndex.toI32()).toHexString().toLowerCase()
   )
-  entity.aggregator = event.params.aggregator.toHexString().toLowerCase()
-  entity.perReporterFee = event.params.perReporterFee
+  entity.exAggregator = event.params.exAggregator.toHexString().toLowerCase()
+  entity.reportersFee = event.params.reportersFee
   entity.publishFee = event.params.publishFee
-  entity.fulfillAddress = event.params.fulfillAddress.toHexString().toLowerCase()
+  entity.aggregator = event.params.aggregator
   entity.rewardAddress = event.params.rewardAddress.toHexString().toLowerCase()
 
   entity.blockNumber = event.block.number
@@ -42,6 +42,7 @@ export function handleAggregatorSuspended(
   let entity = new AggregatorSuspended(
     event.transaction.hash.concatI32(event.logIndex.toI32()).toHexString().toLowerCase()
   )
+  entity.exAggregator = event.params.exAggregator.toHexString().toLowerCase()
   entity.aggregator = event.params.aggregator.toHexString().toLowerCase()
 
   entity.blockNumber = event.block.number
