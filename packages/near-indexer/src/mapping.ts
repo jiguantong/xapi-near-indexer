@@ -27,7 +27,7 @@ function handleAction(
     handleAggregated(logs, blockHeader);
   } else if (functionCall.methodName == "set_publish_chain_config") {
     handleSetPublishChainConfig(logs, blockHeader);
-  } else if (functionCall.methodName == "sync_publish_config_to_remote") {
+  } else if (functionCall.methodName == "sync_publish_config_to_remote_callback") {
     handleSyncPublishChainConfig(logs, blockHeader);
   }
 }
@@ -50,7 +50,8 @@ function handlePublish(logs: string[], blockHeader: near.BlockHeader): void {
   }
 
   const _chainConfigData = _eventData.mustGet("chain_config").toObject()
-  let chainConfig = PublishChainConfig.load(_chainConfigData.mustGet("version").toString());
+  const _version = _chainConfigData.mustGet("version").toString();
+  let chainConfig = PublishChainConfig.load(_version);
   if (chainConfig == null) {
     chainConfig = parseChainConfig(_chainConfigData);
     chainConfig.save();
@@ -74,7 +75,7 @@ function handlePublish(logs: string[], blockHeader: near.BlockHeader): void {
     publishEvent = new PublishEvent(`${nanoId}`);
     publishEvent.request_id = request_id;
     publishEvent.response = nanoId;
-    publishEvent.publish_chain_config = nanoId;
+    publishEvent.publish_chain_config = _version;
     publishEvent.signature = nanoId;
     publishEvent.mpc_options = nanoId;
     publishEvent.call_data = _eventData.mustGet("call_data").toString();
@@ -118,17 +119,17 @@ function handleSetPublishChainConfig(logs: string[], blockHeader: near.BlockHead
   const nanoId = `${blockHeader.timestampNanosec}`;
   const _eventData = _event.mustGet("data").toObject();
 
-  const _chainConfigData = _eventData.mustGet("chain_config").toObject()
-  let chainConfig = PublishChainConfig.load(_chainConfigData.mustGet("version").toString());
+  const _version = _eventData.mustGet("version").toString();
+  let chainConfig = PublishChainConfig.load(_version);
   if (chainConfig == null) {
-    chainConfig = parseChainConfig(_chainConfigData);
+    chainConfig = parseChainConfig(_eventData);
     chainConfig.save();
   }
 
   let setPublishChainConfigEvent = SetPublishChainConfigEvent.load(nanoId);
   if (setPublishChainConfigEvent == null) {
     setPublishChainConfigEvent = new SetPublishChainConfigEvent(nanoId);
-    setPublishChainConfigEvent.publish_chain_config = nanoId;
+    setPublishChainConfigEvent.publish_chain_config = _version;
     setPublishChainConfigEvent.save();
   } else {
     log.debug("SetPublishChainConfigEvent event already exists: {}", [nanoId]);
@@ -170,7 +171,7 @@ function handleSyncPublishChainConfig(logs: string[], blockHeader: near.BlockHea
     syncPublishChainConfigEvent.publish_chain_config = _version;
     syncPublishChainConfigEvent.chain_id = BigInt.fromString(_eventData.mustGet("chain_id").toString());
     syncPublishChainConfigEvent.xapi_address = _eventData.mustGet("xapi_address").toString();
-    syncPublishChainConfigEvent.version = BigInt.fromString(_eventData.mustGet("xapi_address").toString());
+    syncPublishChainConfigEvent.version = BigInt.fromString(_eventData.mustGet("version").toString());
     syncPublishChainConfigEvent.call_data = _eventData.mustGet("call_data").toString();
     syncPublishChainConfigEvent.signature = nanoId;
     syncPublishChainConfigEvent.mpc_options = nanoId;
