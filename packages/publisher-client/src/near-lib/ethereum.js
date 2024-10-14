@@ -33,6 +33,10 @@ export class Ethereum {
     return this.web3.utils.fromWei(balance, "ether");
   }
 
+  async getNonce(accountId) {
+    return await this.web3.eth.getTransactionCount(accountId);
+  }
+
   async getContractViewFunction(receiver, abi, methodName, args = []) {
     const contract = new Contract(receiver, abi, this.provider);
 

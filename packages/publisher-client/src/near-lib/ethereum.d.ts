@@ -4,6 +4,7 @@ export class Ethereum {
     deriveAddress(accountId: string, derivation_path: string): Promise<{ publicKey: Buffer; address: string }>;
     queryGasPrice(): Promise<{ maxFeePerGas: string; maxPriorityFeePerGas: string }>;
     getBalance(accountId: string): Promise<string>;
+    getNonce(accountId: string): Promise<string>;
     getContractViewFunction(receiver: string, abi: any, methodName: string, args?: any[]): Promise<any>;
     createTransactionData(receiver: string, abi: any, methodName: string, args?: any[]): any;
     createPayload(sender: string, receiver: string, amount: string, data: any): Promise<{ transaction: any; payload: any }>;
