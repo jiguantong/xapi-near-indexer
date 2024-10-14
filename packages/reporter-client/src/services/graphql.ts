@@ -28,12 +28,12 @@ export interface ReporterRequired {
 
 export interface RequestMade {
   id: string;
-  requestId: bigint;
+  requestId: string;
   aggregator: string;
   requestData: string;
   requester: string;
-  blockNumber: bigint;
-  blockTimestamp: bigint;
+  blockNumber: string;
+  blockTimestamp: string;
   transactionHash: string;
   fulfilled: number;
 }
@@ -65,7 +65,7 @@ abstract class AbstractGraphqlService {
     });
     const { errors, data } = response.data;
     if (errors) {
-      throw new Error(JSON.stringify(errors));
+      throw new Error(`[${query.endpoint}] \n${JSON.stringify(options)} \nresposne is: ${JSON.stringify(errors)}`);
     }
     // const gralphData = data.data;
 
@@ -81,7 +81,7 @@ abstract class AbstractGraphqlService {
       input: JSON.stringify(data),
       len: 100,
     });
-    logger.debug(`==> ${query.endpoint}\n${logQuery}\n${logData}`);
+    logger.debug(`--> ${query.endpoint}\n${logQuery}\n${logData}`);
     // #### log
     return data;
   }
@@ -125,7 +125,7 @@ export class EvmGraphqlService extends AbstractGraphqlService {
 
 @Service()
 export class NearGraphqlService extends AbstractGraphqlService {
-  async queryAggregatedes(params: QueryWithIds): Promise<XAPIResponse> {
+  async queryAggregatedes(params: QueryWithIds): Promise<XAPIResponse[]> {
     const query = `
     query QueryAggregatedEvents(
       ${params.ids ? "$ids: [String]" : ""}

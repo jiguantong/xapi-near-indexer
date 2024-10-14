@@ -38,3 +38,7 @@ program
   });
 
 program.parse(process.argv);
+
+process.on('uncaughtException', (error) => {
+  logger.error(`detected uncaught exception: ${error.message}`, {target: 'reporter'});
+})

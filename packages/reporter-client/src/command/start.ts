@@ -6,8 +6,9 @@ import {
   NearGraphqlService,
 } from "../services/graphql";
 
-import { logger, XAPIConfig } from "@ringdao/xapi-common";
+import { logger, StoredNearContractOptions, XAPIConfig } from "@ringdao/xapi-common";
 import { HelixChainConf } from "@helixbridge/helixconf";
+import { NearI, NearW } from "../services/near";
 
 export interface BaseStartOptions {}
 
@@ -16,6 +17,7 @@ export interface StartOptions extends BaseStartOptions {
 }
 
 export interface ReporterLifecycle extends StartOptions {
+  near: NearI
   targetChain: HelixChainConf;
 }
 
@@ -27,38 +29,57 @@ export class XAPIExporterStarter {
   ) {}
 
   async start(options: StartOptions) {
-    while (true) {
-      for (const chain of options.targetChains) {
-        try {
-          await this.run({
-            ...options,
-            targetChain: chain,
-          });
-        } catch (e: any) {
-          logger.error(`run reporter errored: ${e.stack || e}`, {
-            target: "reporter",
-            breads: ["start"],
-          });
+    try {
+      const nw = new NearW();
+      const near = await nw.init();
+
+      while (true) {
+        for (const chain of options.targetChains) {
+          try {
+            logger.info(`==== start reporter for ${chain.code} ====`, {
+              target: "reporter",
+            });
+            await this.run({
+              ...options,
+              near,
+              targetChain: chain,
+            });
+          } catch (e: any) {
+            logger.error(`run reporter errored: ${e.stack || e}`, {
+              target: "reporter",
+            });
+          }
         }
+        await setTimeout(1000);
       }
-      await setTimeout(1000);
+    } catch (e: any) {
+      logger.error(`failed to start reporter: ${e.stack || e}`, {
+        target: "reporter",
+      });
     }
   }
 
   private async run(lifecycle: ReporterLifecycle) {
     const { targetChain } = lifecycle;
-    // const todosByTargetChain = await this.evmGraphqlService.queryTodoRequestMade({
-    //   endpoint: XAPIConfig.graphql.endpoint(targetChain.code),
-    // });
-    const aggregateds =
-      await this.nearGraphqlService.queryAggregatedes({
-        endpoint: XAPIConfig.graphql.endpoint("near"),
-        ids: [
-          "6277101735386680763835789423207666416102355444464034512862",
-          "70021766616531051842153016788507494922593962344450640499185811457",
-        ],
-      });
-    console.log(aggregateds);
+    const waites = await this.evmGraphqlService.queryTodoRequestMade({
+      endpoint: XAPIConfig.graphql.endpoint(targetChain.code),
+    });
+    const aggregateds = await this.nearGraphqlService.queryAggregatedes({
+      endpoint: XAPIConfig.graphql.endpoint("near"),
+      ids: waites.map((item) => item.requestId),
+    });
+
+    const todos = waites.filter(
+      (wait) => !aggregateds.find((agg) => agg.request_id === wait.requestId),
+    );
+
+    // console.log(todos);
+
+
+    // ==========
+
+    const c = lifecycle.near.contract(StoredNearContractOptions.ormpAggregator);
+    console.log(c);
 
     logger.debug(lifecycle.targetChain.code, {
       target: "reporter",
