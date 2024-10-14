@@ -50,15 +50,15 @@ export class XAPIExporterStarter {
     // const todosByTargetChain = await this.evmGraphqlService.queryTodoRequestMade({
     //   endpoint: XAPIConfig.graphql.endpoint(targetChain.code),
     // });
-    const aggtegatedEvents =
-      await this.nearGraphqlService.queryAggregatedEvents({
+    const aggregateds =
+      await this.nearGraphqlService.queryAggregatedes({
         endpoint: XAPIConfig.graphql.endpoint("near"),
         ids: [
           "6277101735386680763835789423207666416102355444464034512862",
           "70021766616531051842153016788507494922593962344450640499185811457",
         ],
       });
-    console.log(aggtegatedEvents);
+    console.log(aggregateds);
 
     logger.debug(lifecycle.targetChain.code, {
       target: "reporter",

@@ -17,6 +17,10 @@ export interface QueryWithIds extends BasicGraphqlParams {
   ids: string[];
 }
 
+export interface XAPIResponseParams extends QueryWithIds {
+  status?: string[];
+}
+
 export interface ReporterRequired {
   quorum: number;
   threshold: number;
@@ -34,13 +38,7 @@ export interface RequestMade {
   fulfilled: number;
 }
 
-export interface AggregatedEvent {
-  id: string;
-  request_id: string;
-  response: AggregatedEventResponse;
-}
-
-export interface AggregatedEventResponse {
+export interface XAPIResponse {
   valid_reporters: string[];
   updated_at: string;
   status: string;
@@ -127,25 +125,25 @@ export class EvmGraphqlService extends AbstractGraphqlService {
 
 @Service()
 export class NearGraphqlService extends AbstractGraphqlService {
-  async queryAggregatedEvents(params: QueryWithIds): Promise<AggregatedEvent> {
+  async queryAggregatedes(params: QueryWithIds): Promise<XAPIResponse> {
     const query = `
-    query QueryAggregatedEvents($ids: [String]) {
+    query QueryAggregatedEvents(
+      ${params.ids ? "$ids: [String]" : ""}
+    ) {
       aggregatedEvents(
-        where: {id_in: $ids}
-      ) {
-        response {
-          valid_reporters
-          updated_at
-          status
-          started_at
-          result
-          request_id
-          reporter_reward_addresses
-          id
-          chain_id
+        where: {
+          ${params.ids ? "request_id_in: $ids" : ""}
         }
-        id
+      ) {
+        valid_reporters
+        updated_at
+        status
+        started_at
+        result
         request_id
+        reporter_reward_addresses
+        id
+        chain_id
       }
     }
     `;
