@@ -56,8 +56,14 @@ export function handleFulfilled(event: FulfilledEvent): void {
   let entity = new Fulfilled(
     event.transaction.hash.concatI32(event.logIndex.toI32()).toHexString().toLowerCase()
   )
+  const reporters: string[] = [];
+  const responseReporters = event.params.response.reporters;
+  for (let i=0; i<responseReporters.length; i++) {
+    reporters.push(responseReporters[i].toHexString().toLowerCase());
+  }
+
   entity.requestId = event.params.requestId
-  entity.response_reporters = event.params.response.reporters.map(item => item.toHexString().toLowerCase())
+  entity.response_reporters = reporters
   entity.response_result = event.params.response.result.toHexString().toLowerCase()
   entity.status = event.params.status
 
