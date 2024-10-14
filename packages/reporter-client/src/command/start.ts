@@ -1,10 +1,13 @@
 import { Service } from "typedi";
 import { setTimeout } from "timers/promises";
-import { GraphqlQuery, EvmGraphqlService, NearGraphqlService } from "../services/graphql";
+import {
+  BasicGraphqlParams,
+  EvmGraphqlService,
+  NearGraphqlService,
+} from "../services/graphql";
 
 import { logger, XAPIConfig } from "@ringdao/xapi-common";
 import { HelixChainConf } from "@helixbridge/helixconf";
-
 
 export interface BaseStartOptions {}
 
@@ -24,8 +27,6 @@ export class XAPIExporterStarter {
   ) {}
 
   async start(options: StartOptions) {
-    // const ge = config.get("graphql.endpoint");
-    // console.log(config);
     while (true) {
       for (const chain of options.targetChains) {
         try {
@@ -34,7 +35,10 @@ export class XAPIExporterStarter {
             targetChain: chain,
           });
         } catch (e: any) {
-          console.error(e);
+          logger.error(`run reporter errored: ${e.stack || e}`, {
+            target: "reporter",
+            breads: ["start"],
+          });
         }
       }
       await setTimeout(1000);
@@ -42,12 +46,20 @@ export class XAPIExporterStarter {
   }
 
   private async run(lifecycle: ReporterLifecycle) {
-    const {targetChain} = lifecycle;
-    const query: GraphqlQuery = {
-      endpoint: XAPIConfig.graphql.endpoint(targetChain.code),
-    };
-    console.log(query);
-    const rms = await this.evmGraphqlService.queryRequestMade(query);
+    const { targetChain } = lifecycle;
+    // const todosByTargetChain = await this.evmGraphqlService.queryTodoRequestMade({
+    //   endpoint: XAPIConfig.graphql.endpoint(targetChain.code),
+    // });
+    const aggtegatedEvents =
+      await this.nearGraphqlService.queryAggregatedEvents({
+        endpoint: XAPIConfig.graphql.endpoint("near"),
+        ids: [
+          "6277101735386680763835789423207666416102355444464034512862",
+          "70021766616531051842153016788507494922593962344450640499185811457",
+        ],
+      });
+    console.log(aggtegatedEvents);
+
     logger.debug(lifecycle.targetChain.code, {
       target: "reporter",
       breads: ["hello", "x"],

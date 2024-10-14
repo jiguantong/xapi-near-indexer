@@ -4,6 +4,7 @@ import { Command } from "commander";
 import { Container } from "typedi";
 import { StartOptions, XAPIExporterStarter } from "./command/start";
 import { HelixChain, HelixChainConf } from "@helixbridge/helixconf";
+import { logger } from "@ringdao/xapi-common";
 
 const program = new Command();
 
@@ -27,7 +28,8 @@ program
     [],
   )
   .action(async (options) => {
-    console.log(options);
+    // logger.debug(`arguments: ${JSON.stringify(options)}`, {target: 'reporter'});
+    logger.debug(`run with chains: ${options.chain.map((item: any) => item.code).join(', ')}`);
     const c = Container.get(XAPIExporterStarter);
     const startOptions: StartOptions = {
       targetChains: options.chain,
