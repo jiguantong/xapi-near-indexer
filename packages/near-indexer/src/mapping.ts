@@ -94,17 +94,9 @@ function handleAggregated(logs: string[], blockHeader: near.BlockHeader): void {
   const _eventData = _event.mustGet("data").toObject();
   const request_id = _eventData.mustGet("request_id").toString();
 
-  let response = Response.load(nanoId);
-  if (response == null) {
-    response = parseResponse(_eventData, nanoId);
-    response.save();
-  }
-
-  let aggregatedEvent = AggregatedEvent.load(request_id);
+  let aggregatedEvent = AggregatedEvent.load(nanoId);
   if (aggregatedEvent == null) {
-    aggregatedEvent = new AggregatedEvent(request_id);
-    aggregatedEvent.request_id = request_id;
-    aggregatedEvent.response = nanoId;
+    aggregatedEvent = parseAggregated(_eventData, nanoId);
     aggregatedEvent.save();
   } else {
     log.debug("Aggregated event already exists: {}", [request_id]);
@@ -119,17 +111,9 @@ function handleSetPublishChainConfig(logs: string[], blockHeader: near.BlockHead
   const nanoId = `${blockHeader.timestampNanosec}`;
   const _eventData = _event.mustGet("data").toObject();
 
-  const _version = _eventData.mustGet("version").toString();
-  let chainConfig = PublishChainConfig.load(_version);
-  if (chainConfig == null) {
-    chainConfig = parseChainConfig(_eventData);
-    chainConfig.save();
-  }
-
   let setPublishChainConfigEvent = SetPublishChainConfigEvent.load(nanoId);
   if (setPublishChainConfigEvent == null) {
-    setPublishChainConfigEvent = new SetPublishChainConfigEvent(nanoId);
-    setPublishChainConfigEvent.publish_chain_config = _version;
+    setPublishChainConfigEvent = parseSetPublishChainConfig(_eventData);
     setPublishChainConfigEvent.save();
   } else {
     log.debug("SetPublishChainConfigEvent event already exists: {}", [nanoId]);
@@ -219,6 +203,20 @@ function parseResponse(eventData: TypedMap<string, JSONValue>, nanoId: string): 
   return response;
 }
 
+function parseAggregated(eventData: TypedMap<string, JSONValue>, nanoId: string): AggregatedEvent {
+  log.debug("!!!### parseAggregated", []);
+  const aggregatedEvent = new AggregatedEvent(nanoId);
+  aggregatedEvent.request_id = eventData.mustGet("request_id").toString();
+  aggregatedEvent.valid_reporters = eventData.mustGet("valid_reporters").toArray().map<string>((v: JSONValue) => { return v.toString() });
+  aggregatedEvent.reporter_reward_addresses = eventData.mustGet("reporter_reward_addresses").toArray().map<string>((v: JSONValue) => { return v.toString() });
+  aggregatedEvent.started_at = BigInt.fromString(eventData.mustGet("started_at").toString());
+  aggregatedEvent.updated_at = BigInt.fromString(eventData.mustGet("updated_at").toString());
+  aggregatedEvent.status = eventData.mustGet("status").toString();
+  aggregatedEvent.result = eventData.mustGet("result").toString();
+  aggregatedEvent.chain_id = BigInt.fromString(eventData.mustGet("chain_id").toString());
+  return aggregatedEvent;
+}
+
 function parseChainConfig(chainConfigJson: TypedMap<string, JSONValue>): PublishChainConfig {
   log.debug("!!!### parseChainConfig", []);
   const chainConfig = new PublishChainConfig(chainConfigJson.mustGet("version").toString());
@@ -229,6 +227,18 @@ function parseChainConfig(chainConfigJson: TypedMap<string, JSONValue>): Publish
   chainConfig.reward_address = chainConfigJson.mustGet("reward_address").toString();
   chainConfig.version = BigInt.fromString(chainConfigJson.mustGet("version").toString());
   return chainConfig;
+}
+
+function parseSetPublishChainConfig(chainConfigJson: TypedMap<string, JSONValue>): SetPublishChainConfigEvent {
+  log.debug("!!!### parseChainConfig", []);
+  const setPublishChainConfigEvent = new SetPublishChainConfigEvent(chainConfigJson.mustGet("version").toString());
+  setPublishChainConfigEvent.chain_id = BigInt.fromString(chainConfigJson.mustGet("chain_id").toString());
+  setPublishChainConfigEvent.xapi_address = chainConfigJson.mustGet("xapi_address").toString();
+  setPublishChainConfigEvent.reporters_fee = BigInt.fromString(chainConfigJson.mustGet("reporters_fee").toString());
+  setPublishChainConfigEvent.publish_fee = BigInt.fromString(chainConfigJson.mustGet("publish_fee").toString());
+  setPublishChainConfigEvent.reward_address = chainConfigJson.mustGet("reward_address").toString();
+  setPublishChainConfigEvent.version = BigInt.fromString(chainConfigJson.mustGet("version").toString());
+  return setPublishChainConfigEvent;
 }
 
 function parseSignature(eventData: TypedMap<string, JSONValue>, nanoId: string): Signature {

@@ -48,12 +48,23 @@ type PublishEvent @entity {
 type AggregatedEvent @entity {
   id: ID!
   request_id: String!
-  response: Response!
+  valid_reporters: [String!]!
+  reporter_reward_addresses: [String!]!
+  started_at: BigInt!
+  updated_at: BigInt!
+  status: String!
+  result: String!
+  chain_id: BigInt!
 }
 
 type SetPublishChainConfigEvent @entity {
   id: ID!
-  publish_chain_config: PublishChainConfig!
+  chain_id: BigInt!
+  xapi_address: String!
+  reporters_fee: BigInt!
+  publish_fee: BigInt!
+  reward_address: String!
+  version: BigInt!
 }
 
 type SyncPublishChainConfigEvent @entity {
