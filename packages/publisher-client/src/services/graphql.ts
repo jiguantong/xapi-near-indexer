@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { Service } from 'typedi';
 
-export interface Response {
+export interface XAPIResponse {
     id: string
     request_id: string
     valid_reporters: string[]
@@ -11,6 +11,7 @@ export interface Response {
     status: string
     result: string
     chain_id: string
+    aggregator?: string
 }
 
 export interface PublishChainConfig {
@@ -21,6 +22,7 @@ export interface PublishChainConfig {
     publish_fee: string
     reward_address: string
     version: string
+    aggregator?: string
 }
 
 export interface Signature {
@@ -33,23 +35,12 @@ export interface Signature {
 export interface PublishEvent {
     id: string
     request_id: string
-    response: Response
+    response: XAPIResponse
     publish_chain_config: PublishChainConfig
     signature: Signature
     call_data: string
     mpc_options: MpcOptions
-}
-
-export interface AggregatedEvent {
-    id: string
-    request_id: string
-    valid_reporters: string[]
-    reporter_reward_addresses: string[]
-    started_at: string
-    updated_at: string
-    status: string
-    result: string
-    chain_id: string
+    aggregator: string
 }
 
 export interface SyncPublishChainConfigEvent {
@@ -61,6 +52,7 @@ export interface SyncPublishChainConfigEvent {
     signature: Signature
     mpc_options: MpcOptions
     publish_chain_config: PublishChainConfig
+    aggregator: string
 }
 
 export interface MpcOptions {
@@ -131,7 +123,8 @@ class ThegraphService extends AbstractGraphqlQuery {
                     "max_fee_per_gas": "305777608991",
                     "max_priority_fee_per_gas": "2500000000",
                     "nonce": "2"
-                }
+                },
+                "aggregator": "ormpaggregator.guantong.testnet"
             }
         ];
     }
@@ -165,7 +158,8 @@ class ThegraphService extends AbstractGraphqlQuery {
                     "s_scalar": "795AAEFB55CEBE88B91A65C0BCD38FCDEAA356EEFABA3B3E1D273F1131DA40D3"
                 },
                 "version": "1728716392176893045",
-                "xapi_address": "0x6984ebE378F8cb815546Cb68a98807C1fA121A81"
+                "xapi_address": "0x6984ebE378F8cb815546Cb68a98807C1fA121A81",
+                "aggregator": "ormpaggregator.guantong.testnet"
             }
         ]
     }

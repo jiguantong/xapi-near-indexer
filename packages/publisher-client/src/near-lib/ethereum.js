@@ -8,7 +8,7 @@ import { Common } from '@ethereumjs/common'
 import { Contract, JsonRpcProvider } from "ethers";
 import { parseNearAmount } from "near-api-js/lib/utils/format";
 
-export class Ethereum {
+export class NearEthereum {
   constructor(chain_rpc, chain_id) {
     this.web3 = new Web3(chain_rpc);
     this.provider = new JsonRpcProvider(chain_rpc);

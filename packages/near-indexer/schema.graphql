@@ -8,6 +8,7 @@ type Response @entity {
   status: String!
   result: String!
   chain_id: BigInt!
+  aggregator: String!
 }
 
 type PublishChainConfig @entity {
@@ -18,6 +19,7 @@ type PublishChainConfig @entity {
   publish_fee: BigInt!
   reward_address: String!
   version: BigInt!
+  aggregator: String!
 }
 
 type MpcOptions @entity {
@@ -26,6 +28,7 @@ type MpcOptions @entity {
   gas_limit: BigInt!
   max_fee_per_gas: BigInt!
   max_priority_fee_per_gas: BigInt!
+  aggregator: String!
 }
 
 type Signature @entity {
@@ -33,6 +36,7 @@ type Signature @entity {
   big_r_affine_point: String!
   recovery_id: Int!
   s_scalar: String!
+  aggregator: String!
 }
 
 type PublishEvent @entity {
@@ -43,6 +47,7 @@ type PublishEvent @entity {
   call_data: String!
   signature: Signature!
   mpc_options: MpcOptions!
+  aggregator: String!
 }
 
 type AggregatedEvent @entity {
@@ -55,6 +60,7 @@ type AggregatedEvent @entity {
   status: String!
   result: String!
   chain_id: BigInt!
+  aggregator: String!
 }
 
 type SetPublishChainConfigEvent @entity {
@@ -65,6 +71,7 @@ type SetPublishChainConfigEvent @entity {
   publish_fee: BigInt!
   reward_address: String!
   version: BigInt!
+  aggregator: String!
 }
 
 type SyncPublishChainConfigEvent @entity {
@@ -76,4 +83,5 @@ type SyncPublishChainConfigEvent @entity {
   call_data: String!
   signature: Signature!
   mpc_options: MpcOptions!
+  aggregator: String!
 }

@@ -1,5 +1,5 @@
 // src/near-lib/ethereum.d.ts
-export class Ethereum {
+export class NearEthereum {
     constructor(chain_rpc: string, chain_id: string);
     deriveAddress(accountId: string, derivation_path: string): Promise<{ publicKey: Buffer; address: string }>;
     queryGasPrice(): Promise<{ maxFeePerGas: string; maxPriorityFeePerGas: string }>;
