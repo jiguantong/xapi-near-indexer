@@ -6,9 +6,8 @@ import {
   NearGraphqlService,
 } from "../services/graphql";
 
-import { logger, StoredNearContractOptions, XAPIConfig } from "@ringdao/xapi-common";
+import { logger, StoredNearContractOptions, XAPIConfig, NearI, NearW } from "@ringdao/xapi-common";
 import { HelixChainConf } from "@helixbridge/helixconf";
-import { NearI, NearW } from "../services/near";
 
 export interface BaseStartOptions {}
 
