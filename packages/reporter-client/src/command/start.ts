@@ -30,7 +30,13 @@ export class XAPIExporterStarter {
   async start(options: StartOptions) {
     try {
       const nw = new NearW();
-      const near = await nw.init();
+      const near = await nw.init({
+        networkId: 'testnet',
+        account: {
+          privateKey: 'secp256k1:by8kdJoJHu7uUkKfoaLd2J2Dp1q1TigeWMG123pHdu9UREqPcshCM223kWadm',
+          accountId: 'example-account',
+        }
+      });
 
       while (true) {
         for (const chain of options.targetChains) {

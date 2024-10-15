@@ -1,14 +1,25 @@
-
 import * as nearAPI from "near-api-js";
 import {
   JsonRpcProvider,
   FailoverRpcProvider,
+  Provider,
 } from "near-api-js/lib/providers";
 import { ContractMethods } from "near-api-js/lib/contract";
+import { KeyPairString } from "near-api-js/lib/utils";
 
 export interface NearContractOptions {
   contractId: string;
   options: ContractMethods;
+}
+
+export interface NearInitOptions {
+  networkId: 'mainnet' | 'testnet'
+  account: NearIdentify
+}
+
+export interface NearIdentify {
+  privateKey: KeyPairString
+  accountId: string
 }
 
 
@@ -33,38 +44,62 @@ export const StoredNearContractOptions: Record<string, NearContractOptions> = {
 
 
 export class NearW {
-  public async init(): Promise<NearI> {
+
+  private async nearConfig(options: NearInitOptions): Promise<nearAPI.ConnectConfig> {
     const { keyStores, KeyPair } = nearAPI;
     const myKeyStore = new keyStores.InMemoryKeyStore();
-    const PRIVATE_KEY =
-      "secp256k1:by8kdJoJHu7uUkKfoaLd2J2Dp1q1TigeWMG123pHdu9UREqPcshCM223kWadm";
-    const keyPair = KeyPair.fromString(PRIVATE_KEY);
-    await myKeyStore.setKey("default", "example-account.mainnet", keyPair);
+    const keyPair = KeyPair.fromString(options.account.privateKey);
+    await myKeyStore.setKey(
+      options.networkId,
+      options.account.accountId,
+      keyPair
+    );
 
-    const jsonProviders = [
-      new JsonRpcProvider({
-        url: "https://rpc.mainnet.near.org",
-      }),
-      new JsonRpcProvider({
-        url: "https://rpc.mainnet.pagoda.co",
-      }),
-      new JsonRpcProvider({
-        url: "https://near.lava.build",
-      }),
-    ];
-    const provider = new FailoverRpcProvider(jsonProviders);
+    switch (options.networkId) {
+      case 'mainnet': {
+        const jsonProviders = [
+          new JsonRpcProvider({
+            url: "https://rpc.mainnet.near.org",
+          }),
+          new JsonRpcProvider({
+            url: "https://rpc.mainnet.pagoda.co",
+          }),
+          new JsonRpcProvider({
+            url: "https://near.lava.build",
+          }),
+        ];
+        const provider = new FailoverRpcProvider(jsonProviders);
+        return {
+          networkId: "mainnet",
+          provider: provider,
+          keyStore: myKeyStore,
+          nodeUrl: "https://rpc.mainnet.near.org",
+          walletUrl: "https://wallet.mainnet.near.org",
+          helperUrl: "https://helper.mainnet.near.org",
+        };
+      }
+      case 'testnet': {
+        const jsonProviders = [
+          new JsonRpcProvider({
+            url: "https://rpc.testnet.near.org",
+          }),
+        ];
+        const provider = new FailoverRpcProvider(jsonProviders);
+        return {
+          networkId: 'testnet',
+          provider: provider,
+          keyStore: myKeyStore,
+          nodeUrl: 'https://rpc.testnet.near.org',
+          walletUrl: 'https://wallet.testnet.near.org',
+          helperUrl: 'https://helper.testnet.near.org',
+        };
+      }
+    }
+  }
 
-    const connectionConfig = {
-      networkId: "mainnet",
-      provider: provider,
-      keyStore: myKeyStore,
-      nodeUrl: "https://rpc.mainnet.near.org",
-      walletUrl: "https://wallet.mainnet.near.org",
-      helperUrl: "https://helper.mainnet.near.org",
-      explorerUrl: "https://nearblocks.io",
-    };
-
-    const nearConnection = await nearAPI.connect(connectionConfig);
+  public async init(options: NearInitOptions): Promise<NearI> {
+    const config = await this.nearConfig(options);
+    const nearConnection = await nearAPI.connect(config);
     return new NearI(nearConnection);
   }
 }
