@@ -8,6 +8,7 @@ import { Common } from '@ethereumjs/common';
 import { connect, Contract, KeyPair, keyStores, WalletConnection } from 'near-api-js';
 import { KeyPairString } from 'near-api-js/lib/utils';
 import { FailoverRpcProvider, JsonRpcProvider } from 'near-api-js/lib/providers';
+import { Account } from '@near-js/accounts';
 
 export interface StartOptions {
 
@@ -24,40 +25,26 @@ export class PublisherStarter {
 
     private nearEthereumMap: Record<string, NearEthereum> = {};
 
-    async start(options: StartOptions) {
-        const myKeyStore = new keyStores.InMemoryKeyStore();
-        const PRIVATE_KEY: KeyPairString =
-            "ed25519:by8kdJoJHu7uUkKfoaLd2J2Dp1q1TigeWMG123pHdu9UREqPcshCM223kWadm";
-        // creates a public / private key pair using the provided private key
-        const keyPair = KeyPair.fromString(PRIVATE_KEY);
-        // adds the keyPair you created to keyStore
-        await myKeyStore.setKey("testnet", "example-account.testnet", keyPair);
+    async startPublisher(options: StartOptions) {
+        // Fetch Aggregated events from near indexer
+        // for eatch target chain
+        // Fetch Fulfilled event from evm indexer
+        // if not fulfilled, 
+        // Check request status on xapi contract
+        // if status is pending, triggerPublish
+        // if result, relayMpc
+        // if timeout, wait and then relay
+    }
 
-        const connectionConfig = {
-            networkId: "testnet",
-            keyStore: myKeyStore, // first create a key store
-            nodeUrl: "https://rpc.testnet.near.org",
-            walletUrl: "https://testnet.mynearwallet.com/",
-            helperUrl: "https://helper.testnet.near.org",
-            explorerUrl: "https://testnet.nearblocks.io",
-        };
-        const nearConnection = await connect(connectionConfig);
-        // console.log(await nearConnection.account("example-account.testnet"));
-
-        const c = new Contract(nearConnection.connection, "ormpaggregator.guantong.testnet", {
-            viewMethods: ['get_response'],
-            changeMethods: [],
-            useLocalViewExecution: false
-        });
-        // @ts-ignore
-        const r = await c.get_response({"request_id": "70021766616531051842153016788507494922593962344450640499185811462"});
-        console.log("result", r);
-        // const first = (await this.graphqlService.queryPublishEvent())[0];
-        // const first = (await this.graphqlService.querySyncPublishChainConfigEvent())[0];
-
-        // console.log(`call_data: ${first.call_data}`);
-        // console.log(first, new Date());
-        // await setTimeout(1000);
+    async startConfigSyncer(options: StartOptions) {
+        // Fetch SetPublishChainConfigEvent from near indexer
+        // for eatch target chain
+        // Fetch AggregatorConfigSet event from evm indexer
+        // if the version doesn't exist on target chain
+        // Check chain config state on xapi contract
+        // if version < this version triggerSyncConfig
+        // if result, relayMpc
+        // if timeout, wait and then relay
     }
 
     async triggerPublish(xapiResponse: XAPIResponse) {
