@@ -47,7 +47,7 @@ const customFormat = winston.format((info, opt) => {
 });
 
 export const logger: Logger = winston.createLogger({
-  level: process.env.XPI_LOG_LEVEL ?? 'info',
+  level: process.env.XAPI_LOG_LEVEL ?? 'info',
   transports: [
     new winston.transports.Console({
       format: winston.format.combine(

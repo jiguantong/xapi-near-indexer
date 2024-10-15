@@ -78,7 +78,7 @@ export class XAPIExporterStarter {
       (wait) => !aggregateds.find((agg) => agg.request_id === wait.requestId),
     );
 
-    // console.log(todos);
+    console.log(todos);
 
 
     // ==========

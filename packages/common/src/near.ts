@@ -126,7 +126,7 @@ export class NearI {
       return cachedContract;
     }
     const c = new nearAPI.Contract(
-      this.wallet.account(),
+      this._near.connection,
       options.contractId,
       options.options,
     );
