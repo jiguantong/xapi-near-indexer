@@ -10,6 +10,7 @@ import {
   NearW,
   ReporterRequired,
   XAPIResponse,
+  TopStaked,
 } from "@ringdao/xapi-common";
 import { HelixChainConf } from "@helixbridge/helixconf";
 
@@ -117,11 +118,16 @@ export class XAPIExporterStarter {
     );
 
     const ag = near.contractAggregator('ormpaggregator.guantong.testnet');
-    const sc = await this._stakingContract(lifecycle, 'ormpaggregator.guantong.testnet')
-
     // @ts-ignore
     const reporterRequired: ReporterRequired = await ag.get_reporter_required();
     console.log("------>", reporterRequired);
+
+    const sc = await this._stakingContract(lifecycle, 'ormpaggregator.guantong.testnet');
+    // @ts-ignore
+    const topStaked: TopStaked = await sc.get_top_staked({top: reporterRequired.quorum});
+    console.log("------>", topStaked);
+
+
 
     // const reporterRequired: Record<string, any> = {};
     // for (const todo of possibleTodos) {

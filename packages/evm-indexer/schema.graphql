@@ -58,6 +58,7 @@ type RequestMade @entity(immutable: true) {
   blockTimestamp: BigInt!
   transactionHash: String!
 
+  xapiAddress: String!
   fulfilled: Int!
 }
 

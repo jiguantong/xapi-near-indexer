@@ -100,23 +100,6 @@ export class NearI {
     return this.walletConnection;
   }
 
-  // ormpAggregator: {
-  //   contractId: 'ormpaggregator.guantong.testnet',
-  //   options: {
-  //     viewMethods: ['get_response'],
-  //     changeMethods: [],
-  //     useLocalViewExecution: false,
-  //   },
-  // },
-  // ormpStaking: {
-  //   contractId: 'stake.guantong.testnet',
-  //   options: {
-  //     viewMethods: [],
-  //     changeMethods: [],
-  //     useLocalViewExecution: false,
-  //   }
-  // },
-
   public contract(contractId: string, options: ContractMethods): nearAPI.Contract {
     const cachedContract = this.contractMap[contractId];
     if (cachedContract) {

@@ -126,6 +126,7 @@ export function handleRequestMade(event: RequestMadeEvent): void {
   entity.transactionHash = event.transaction.hash.toHexString().toLowerCase()
 
   entity.fulfilled = 0;
+  entity.xapiAddress = event.address.toHexString().toLowerCase();
 
   entity.save()
 }

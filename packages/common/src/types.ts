@@ -28,3 +28,8 @@ export interface XAPIResponse {
   chain_id: string
   reporter_reward_addresses: string[]
 }
+
+export interface TopStaked {
+  account_id: string
+  amount: string
+}
