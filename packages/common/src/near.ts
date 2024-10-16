@@ -2,7 +2,6 @@ import * as nearAPI from "near-api-js";
 import {
   JsonRpcProvider,
   FailoverRpcProvider,
-  Provider,
 } from "near-api-js/lib/providers";
 import { ContractMethods } from "near-api-js/lib/contract";
 import { KeyPairString } from "near-api-js/lib/utils";
@@ -13,50 +12,31 @@ export interface NearContractOptions {
 }
 
 export interface NearInitOptions {
-  networkId: 'mainnet' | 'testnet'
-  account: NearIdentify
+  networkId: "mainnet" | "testnet";
+  account: NearIdentify;
 }
 
 export interface NearIdentify {
-  privateKey: KeyPairString
-  accountId: string
+  privateKey: KeyPairString;
+  accountId: string;
 }
 
 
-export const StoredNearContractOptions: Record<string, NearContractOptions> = {
-  ormpAggregator: {
-    contractId: 'ormpaggregator.guantong.testnet',
-    options: {
-      viewMethods: ['get_response'],
-      changeMethods: [],
-      useLocalViewExecution: false,
-    }
-  },
-  ormpStaking: {
-    contractId: 'stake.guantong.testnet',
-    options: {
-      viewMethods: [],
-      changeMethods: [],
-      useLocalViewExecution: false,
-    }
-  },
-};
-
-
 export class NearW {
-
-  private async nearConfig(options: NearInitOptions): Promise<nearAPI.ConnectConfig> {
+  private async nearConfig(
+    options: NearInitOptions,
+  ): Promise<nearAPI.ConnectConfig> {
     const { keyStores, KeyPair } = nearAPI;
     const myKeyStore = new keyStores.InMemoryKeyStore();
     const keyPair = KeyPair.fromString(options.account.privateKey);
     await myKeyStore.setKey(
       options.networkId,
       options.account.accountId,
-      keyPair
+      keyPair,
     );
 
     switch (options.networkId) {
-      case 'mainnet': {
+      case "mainnet": {
         const jsonProviders = [
           new JsonRpcProvider({
             url: "https://rpc.mainnet.near.org",
@@ -78,7 +58,7 @@ export class NearW {
           helperUrl: "https://helper.mainnet.near.org",
         };
       }
-      case 'testnet': {
+      case "testnet": {
         const jsonProviders = [
           new JsonRpcProvider({
             url: "https://rpc.testnet.near.org",
@@ -86,12 +66,12 @@ export class NearW {
         ];
         const provider = new FailoverRpcProvider(jsonProviders);
         return {
-          networkId: 'testnet',
+          networkId: "testnet",
           provider: provider,
           keyStore: myKeyStore,
-          nodeUrl: 'https://rpc.testnet.near.org',
-          walletUrl: 'https://wallet.testnet.near.org',
-          helperUrl: 'https://helper.testnet.near.org',
+          nodeUrl: "https://rpc.testnet.near.org",
+          walletUrl: "https://wallet.testnet.near.org",
+          helperUrl: "https://helper.testnet.near.org",
         };
       }
     }
@@ -120,18 +100,57 @@ export class NearI {
     return this.walletConnection;
   }
 
-  public contract(options: NearContractOptions): nearAPI.Contract {
-    const cachedContract = this.contractMap[options.contractId];
+  // ormpAggregator: {
+  //   contractId: 'ormpaggregator.guantong.testnet',
+  //   options: {
+  //     viewMethods: ['get_response'],
+  //     changeMethods: [],
+  //     useLocalViewExecution: false,
+  //   },
+  // },
+  // ormpStaking: {
+  //   contractId: 'stake.guantong.testnet',
+  //   options: {
+  //     viewMethods: [],
+  //     changeMethods: [],
+  //     useLocalViewExecution: false,
+  //   }
+  // },
+
+  public contract(contractId: string, options: ContractMethods): nearAPI.Contract {
+    const cachedContract = this.contractMap[contractId];
     if (cachedContract) {
       return cachedContract;
     }
     const c = new nearAPI.Contract(
       this._near.connection,
-      options.contractId,
-      options.options,
+      contractId,
+      options,
     );
-    this.contractMap[options.contractId] = c;
+    this.contractMap[contractId] = c;
     return c;
   }
-}
 
+  public contractAggregator(contractId: string): nearAPI.Contract {
+    return this.contract(contractId, {
+      viewMethods: [
+        'get_response',
+        'get_reporter_required',
+        'get_staking_contract',
+      ],
+      changeMethods: [],
+      useLocalViewExecution: false,
+    });
+  }
+
+  public contractStaking(contractId: string): nearAPI.Contract {
+    return this.contract(contractId, {
+      viewMethods: [
+        'get_top_staked'
+      ],
+      changeMethods: [],
+      useLocalViewExecution: false,
+    });
+  }
+
+}

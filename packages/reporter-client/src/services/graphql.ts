@@ -1,7 +1,7 @@
 import axios from "axios";
 import { Service } from "typedi";
 
-import { logger, Tools } from "@ringdao/xapi-common";
+import { logger, Tools, XAPIResponse, RequestMade } from "@ringdao/xapi-common";
 import chalk = require("chalk");
 
 export interface BasicGraphqlParams {
@@ -19,35 +19,6 @@ export interface QueryWithIds extends BasicGraphqlParams {
 
 export interface XAPIResponseParams extends QueryWithIds {
   status?: string[];
-}
-
-export interface ReporterRequired {
-  quorum: number;
-  threshold: number;
-}
-
-export interface RequestMade {
-  id: string;
-  requestId: string;
-  aggregator: string;
-  requestData: string;
-  requester: string;
-  blockNumber: string;
-  blockTimestamp: string;
-  transactionHash: string;
-  fulfilled: number;
-}
-
-export interface XAPIResponse {
-  valid_reporters: string[];
-  updated_at: string;
-  status: string;
-  started_at: string;
-  result: string;
-  request_id: string;
-  id: string;
-  chain_id: string;
-  reporter_reward_addresses: string[];
 }
 
 abstract class AbstractGraphqlService {
@@ -125,7 +96,7 @@ export class EvmGraphqlService extends AbstractGraphqlService {
 
 @Service()
 export class NearGraphqlService extends AbstractGraphqlService {
-  async queryAggregatedes(params: QueryWithIds): Promise<XAPIResponse[]> {
+  async queryAggregatedeEvents(params: QueryWithIds): Promise<XAPIResponse[]> {
     const query = `
     query QueryAggregatedEvents(
       ${params.ids ? "$ids: [String]" : ""}
