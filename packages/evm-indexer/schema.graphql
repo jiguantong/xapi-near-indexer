@@ -48,7 +48,7 @@ type OwnershipTransferred @entity(immutable: true) {
   transactionHash: String!
 }
 
-type RequestMade @entity(immutable: true) {
+type RequestMade @entity {
   id: String!
   requestId: BigInt! # uint256
   aggregator: String! # string
