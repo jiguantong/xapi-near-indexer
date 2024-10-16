@@ -1,29 +1,15 @@
-type ReporterRequired @entity {
-  id: ID!
-  quorum: Int!
-  threshold: Int!
-}
-
-enum RequestStatus {
-  FETCHING,
-  DONE,
-  TIMEOUT,
-  PUBLISHED,
-}
-
 type Response @entity {
   id: ID!
   request_id: String!
-  reporters: String!
+  valid_reporters: [String!]!
   reporter_reward_addresses: [String!]!
   started_at: BigInt!
   updated_at: BigInt!
-  status: RequestStatus!
-  call_data: String!
+  status: String!
+  call_data: String
   result: String!
   nonce: BigInt!
   chain_id: BigInt!
-  reporter_required: ReporterRequired!
 }
 
 type PublishChainConfig @entity {
@@ -35,10 +21,23 @@ type PublishChainConfig @entity {
   max_priority_fee_per_gas: BigInt!
 }
 
+type Signature @entity {
+  id: ID!
+  big_r_affine_point: String!
+  recovery_id: Int!
+  s_scalar: String!
+}
+
 type PublishEvent @entity {
   id: ID!
   request_id: String!
   response: Response!
   chain_config: PublishChainConfig!
-  signature: String!
+  signature: Signature!
+}
+
+type AggregatedEvent @entity {
+  id: ID!
+  request_id: String!
+  response: Response!
 }
