@@ -1,44 +1,197 @@
 import { Service } from 'typedi';
 import { setTimeout } from "timers/promises";
-import { GraphqlService, MpcOptions, XAPIResponse, Signature, PublishChainConfig } from "../services/graphql";
+import { MpcOptions, XAPIResponse, Signature, PublishChainConfig, EvmGraphqlService, NearGraphqlService, RequestMade } from "../services/graphql";
 import { FeeMarketEIP1559Transaction } from '@ethereumjs/tx';
 import { Address } from '@ethereumjs/util';
 import { NearEthereum } from '../near-lib/ethereum';
 import { Common } from '@ethereumjs/common';
-import { connect, Contract, KeyPair, keyStores, WalletConnection } from 'near-api-js';
-import { KeyPairString } from 'near-api-js/lib/utils';
-import { FailoverRpcProvider, JsonRpcProvider } from 'near-api-js/lib/providers';
-import { Account } from '@near-js/accounts';
+import {
+    logger,
+    XAPIConfig,
+    NearI,
+    NearW,
+} from "@ringdao/xapi-common";
+import { HelixChainConf } from "@helixbridge/helixconf";
+
+const xapiRequestsAbi = {
+    "inputs": [
+        {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+        }
+    ],
+    "name": "requests",
+    "outputs": [
+        {
+            "internalType": "string",
+            "name": "aggregator",
+            "type": "string"
+        },
+        {
+            "internalType": "string",
+            "name": "requestData",
+            "type": "string"
+        },
+        {
+            "internalType": "address",
+            "name": "requester",
+            "type": "address"
+        },
+        {
+            "internalType": "address",
+            "name": "callbackContract",
+            "type": "address"
+        },
+        {
+            "internalType": "bytes4",
+            "name": "callbackFunction",
+            "type": "bytes4"
+        },
+        {
+            "internalType": "enum RequestStatus",
+            "name": "status",
+            "type": "uint8"
+        },
+        {
+            "internalType": "address",
+            "name": "exAggregator",
+            "type": "address"
+        },
+        {
+            "components": [
+                {
+                    "internalType": "address[]",
+                    "name": "reporters",
+                    "type": "address[]"
+                },
+                {
+                    "internalType": "bytes",
+                    "name": "result",
+                    "type": "bytes"
+                }
+            ],
+            "internalType": "struct ResponseData",
+            "name": "response",
+            "type": "tuple"
+        },
+        {
+            "internalType": "uint256",
+            "name": "payment",
+            "type": "uint256"
+        }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+};
 
 export interface StartOptions {
+    targetChains: HelixChainConf[];
+}
 
+export interface PublisherLifecycle extends StartOptions {
+    near: NearI;
+    targetChain: HelixChainConf;
+    nearEthereum: NearEthereum;
 }
 
 @Service()
 export class PublisherStarter {
+    private _nearInstance: Record<string, NearI> = {};
 
     constructor(
-        private graphqlService: GraphqlService,
+        private evmGraphqlService: EvmGraphqlService,
+        private nearGraphqlService: NearGraphqlService
     ) {
-        this.graphqlService = new GraphqlService()
+    }
+
+    private async near(
+        options: StartOptions,
+        chain: HelixChainConf,
+    ): Promise<NearI> {
+        const networkId = chain.testnet ? "testnet" : "mainnet";
+        const cachedNear = this._nearInstance[networkId];
+        if (cachedNear) return cachedNear;
+
+        const nw = new NearW();
+        const near = await nw.init({
+            networkId,
+            account: {
+                privateKey:
+                    "secp256k1:by8kdJoJHu7uUkKfoaLd2J2Dp1q1TigeWMG123pHdu9UREqPcshCM223kWadm",
+                accountId: "example-account",
+            },
+        });
+        this._nearInstance[networkId] = near;
+        return near;
     }
 
     private nearEthereumMap: Record<string, NearEthereum> = {};
 
-    async startPublisher(options: StartOptions) {
-        // Fetch Aggregated events from near indexer
-        // for eatch target chain
-        // Fetch Fulfilled event from evm indexer
-        // if not fulfilled, 
-        // Check request status on xapi contract
-        // if status is pending, triggerPublish
-        // if result, relayMpc
-        // if timeout, wait and then relay
+    async start(options: StartOptions) {
+        while (true) {
+            for (const chain of options.targetChains) {
+                const near = await this.near(options, chain);
+                const nearEthereum = this.getNearEthClient(chain);
+                try {
+                    logger.info(`==== start publisher for ${chain.code} ====`, {
+                        target: "publisher",
+                    });
+                    await this.runPublisher({ ...options, near, targetChain: chain, nearEthereum });
+                    await setTimeout(1000);
+                } catch (e: any) {
+                    logger.error(`run publisher errored: ${e.stack || e}`, {
+                        target: "publisher",
+                    });
+                }
+                try {
+                    logger.info(`==== start config-syncer for ${chain.code} ====`, {
+                        target: "config-syncer",
+                    });
+                    await this.runConfigSyncer({ ...options, near, targetChain: chain, nearEthereum });
+                    await setTimeout(1000);
+                } catch (e: any) {
+                    logger.error(`run ConfigSyncer errored: ${e.stack || e}`, {
+                        target: "config-syncer",
+                    });
+                }
+                await setTimeout(1000);
+            }
+        }
     }
 
-    async startConfigSyncer(options: StartOptions) {
-        // Fetch SetPublishChainConfigEvent from near indexer
-        // for eatch target chain
+    async runPublisher(lifecycle: PublisherLifecycle) {
+        const { near, targetChain } = lifecycle;
+        // 1. Fetch !fulfilled reqeust ids
+        const nonfulfilled = await this.evmGraphqlService.queryTodoRequestMade({
+            endpoint: XAPIConfig.graphql.endpoint(targetChain.code),
+        });
+        // 2. Fetch aggregated events for nonfulfilled requests
+        const aggregatedEvents =
+            await this.nearGraphqlService.queryAggregatedeEvents({
+                endpoint: XAPIConfig.graphql.endpoint('near'),
+                ids: nonfulfilled.map((item) => item.requestId),
+            });
+        const toPublishIds = aggregatedEvents.map(a => a.request_id);
+        logger.info(`==> [${targetChain.name}-${targetChain.code}] toPublishIds: ${toPublishIds}`, {
+            target: "publisher",
+        });
+        // 3. Check request status on xapi contract
+        for (const aggregated of aggregatedEvents) {
+            const relatedRequest = nonfulfilled.find(v => v.requestId == aggregated.request_id);
+            const _request = await lifecycle.nearEthereum.getContractViewFunction(relatedRequest!.xapiAddress, [xapiRequestsAbi], "requests", [relatedRequest!.requestId]);
+            logger.info(`==> [${targetChain.name}-${targetChain.code}] double check ${relatedRequest?.requestId}, status: ${_request.status}`, {
+                target: "publisher",
+            });
+            if (_request.stauts == 0) {
+                // 4. if status is pending, triggerPublish
+                this.triggerPublish(aggregated, lifecycle);
+            }
+        }
+    }
+
+    async runConfigSyncer(lifecycle: PublisherLifecycle) {
+        // Fetch latest SetPublishChainConfigEvent from near indexer for chainid
         // Fetch AggregatorConfigSet event from evm indexer
         // if the version doesn't exist on target chain
         // Check chain config state on xapi contract
@@ -47,9 +200,8 @@ export class PublisherStarter {
         // if timeout, wait and then relay
     }
 
-    async triggerPublish(xapiResponse: XAPIResponse) {
+    async triggerPublish(xapiResponse: XAPIResponse, lifecycle: PublisherLifecycle) {
         const chainId = xapiResponse.chain_id;
-        const nearEth = this.getNearEthClient(chainId);
 
         // todo Fetch XAPI address from near chain config
         const xapiAddress = Address.fromString("0x6984ebE378F8cb815546Cb68a98807C1fA121A81");
@@ -58,37 +210,37 @@ export class PublisherStarter {
         const gasLimit = 500000
 
         // Derive address
-        const deriveAddress = await this.deriveXAPIAddress(chainId);
-        const nonce = await nearEth.getNonce(deriveAddress);
-        const balance = await nearEth.getBalance(deriveAddress);
-        const { maxFeePerGas, maxPriorityFeePerGas } = await nearEth.queryGasPrice();
+        const deriveAddress = await this.deriveXAPIAddress(lifecycle);
+        const nonce = await lifecycle.nearEthereum.getNonce(deriveAddress);
+        const balance = await lifecycle.nearEthereum.getBalance(deriveAddress);
+        const { maxFeePerGas, maxPriorityFeePerGas } = await lifecycle.nearEthereum.queryGasPrice();
 
         // call Aggregator publish_external()
         (xapiResponse.request_id, { mpc_options: { nonce, gas_limit: gasLimit, max_fee_per_gas: maxFeePerGas, max_priority_fee_per_gas: maxPriorityFeePerGas } });
+        // if published, relay
+        // if timeout, wait and find published evnet and relay
     }
 
-    async triggerSyncConfig(publishChainConfig: PublishChainConfig) {
+    async triggerSyncConfig(publishChainConfig: PublishChainConfig, lifecycle: PublisherLifecycle) {
         const chainId = publishChainConfig.chain_id;
-        const nearEth = this.getNearEthClient(chainId);
 
         // todo Fetch XAPI address from near chain config
         const xapiAddress = Address.fromString("0x6984ebE378F8cb815546Cb68a98807C1fA121A81");
 
         // todo Estimate gasLimit
-        const gasLimit = 500000
+        const gasLimit = 500000;
 
         // Derive address
-        const deriveAddress = await this.deriveXAPIAddress(chainId);
-        const nonce = await nearEth.getNonce(deriveAddress);
-        const balance = await nearEth.getBalance(deriveAddress);
-        const { maxFeePerGas, maxPriorityFeePerGas } = await nearEth.queryGasPrice();
+        const deriveAddress = await this.deriveXAPIAddress(lifecycle);
+        const nonce = await lifecycle.nearEthereum.getNonce(deriveAddress);
+        const balance = await lifecycle.nearEthereum.getBalance(deriveAddress);
+        const { maxFeePerGas, maxPriorityFeePerGas } = await lifecycle.nearEthereum.queryGasPrice();
 
         // call Aggregator sync_publish_config_to_remote()
         (publishChainConfig.chain_id, { mpc_options: { nonce, gas_limit: gasLimit, max_fee_per_gas: maxFeePerGas, max_priority_fee_per_gas: maxPriorityFeePerGas } });
     }
 
-    async relayMpcTx(chainId: string, contract: Address, calldata: string, signature: Signature, mpcOptions: MpcOptions) {
-        const nearEth = this.getNearEthClient(chainId.toString());
+    async relayMpcTx(chainId: string, contract: Address, calldata: string, signature: Signature, mpcOptions: MpcOptions, lifecycle: PublisherLifecycle) {
         const transaction = FeeMarketEIP1559Transaction.fromTxData({
             nonce: BigInt(mpcOptions.nonce),
             gasLimit: BigInt(mpcOptions.gas_limit),
@@ -101,26 +253,24 @@ export class PublisherStarter {
 
         // console.log("### transaction", transaction);
 
-        const signedTransaction = await nearEth.reconstructSignature({ affine_point: signature.big_r_affine_point }, { scalar: signature.s_scalar }, signature.recovery_id, transaction);
+        const signedTransaction = await lifecycle.nearEthereum.reconstructSignature({ affine_point: signature.big_r_affine_point }, { scalar: signature.s_scalar }, signature.recovery_id, transaction);
         // console.log("### signedTransaction", signedTransaction);
 
-        const txHash = await nearEth.relayTransaction(signedTransaction);
+        const txHash = await lifecycle.nearEthereum.relayTransaction(signedTransaction);
         console.log("### relayTx", txHash);
     }
 
-    async deriveXAPIAddress(chainId: string) {
-        const nearEth = this.getNearEthClient(chainId);
-        return (await nearEth.deriveAddress("ormpaggregator.guantong.testnet", `XAPI-${chainId}`)).address;
+    async deriveXAPIAddress(lifecycle: PublisherLifecycle) {
+        return (await lifecycle.nearEthereum.deriveAddress("ormpaggregator.guantong.testnet", `XAPI-${lifecycle.targetChain.code}`)).address;
     }
 
-    getNearEthClient(chainId: string): NearEthereum {
-        const cachedNearEthereum = this.nearEthereumMap[chainId];
+    getNearEthClient(chain: HelixChainConf): NearEthereum {
+        const cachedNearEthereum = this.nearEthereumMap[chain.code];
         if (cachedNearEthereum) {
             return cachedNearEthereum;
         }
-        // todo read rpc from config
-        const ne = new NearEthereum("https://rpc.sepolia.org", chainId);
-        this.nearEthereumMap[chainId] = ne;
+        const ne = new NearEthereum(chain.rpc, chain.code);
+        this.nearEthereumMap[chain.code] = ne;
         return ne;
     }
 }
