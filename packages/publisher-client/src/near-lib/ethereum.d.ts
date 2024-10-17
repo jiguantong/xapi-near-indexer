@@ -11,4 +11,5 @@ export class NearEthereum {
     requestSignatureToMPC(wallet: any, contractId: string, path: string, ethPayload: any): Promise<{ big_r: any; s: any; recovery_id: any }>;
     reconstructSignature(big_r: any, S: any, recovery_id: any, transaction: any): Promise<any>;
     relayTransaction(signedTransaction: any): Promise<string>;
+    estimateGas(receiver, abi, methodName, args = []): Promise<any>;
 }

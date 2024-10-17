@@ -113,4 +113,9 @@ export class NearEthereum {
     const relayed = await this.web3.eth.sendSignedTransaction(serializedTx);
     return relayed.transactionHash
   }
+
+  async estimateGas(receiver, abi, methodName, args = []) {
+    const contract = new Contract(receiver, abi, this.provider);
+    return contract.methods[methodName](...args).estimateGas();
+  }
 }
