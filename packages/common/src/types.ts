@@ -86,11 +86,3 @@ export interface MpcOptions {
   max_priority_fee_per_gas: string
 }
 
-
-export interface BasicGraphqlParams {
-  endpoint: string;
-}
-
-export interface QueryWithIds extends BasicGraphqlParams {
-  ids: string[];
-}

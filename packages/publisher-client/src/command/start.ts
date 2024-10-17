@@ -105,8 +105,8 @@ export class PublisherStarter {
   private _nearInstance: Record<string, NearI> = {};
 
   constructor(
-    private evmGraphqlService: EvmGraphqlService,
-    private nearGraphqlService: NearGraphqlService,
+    private readonly evmGraphqlService: EvmGraphqlService,
+    private readonly nearGraphqlService: NearGraphqlService,
   ) {}
 
   private async near(

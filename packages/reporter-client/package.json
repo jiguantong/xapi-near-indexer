@@ -17,7 +17,6 @@
   },
   "dependencies": {
     "@stdlib/string-pad": "^0",
-    "axios": "^1.7.7",
     "chalk": "^4",
     "commander": "^12.1.0",
     "near-api-js": "^5.0.0",

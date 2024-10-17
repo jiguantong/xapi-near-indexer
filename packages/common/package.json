@@ -18,7 +18,8 @@
     "@stdlib/string-pad": "^0",
     "chalk": "^4",
     "near-api-js": "^5.0.0",
-    "winston": "^3"
+    "winston": "^3",
+    "axios": "^1.7.7"
   },
   "devDependencies": {
     "@types/jest": "^29",

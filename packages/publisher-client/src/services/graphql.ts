@@ -1,4 +1,3 @@
-import axios from "axios";
 import { Service } from "typedi";
 import {
   logger,
@@ -7,53 +6,10 @@ import {
   QueryWithIds,
   RequestMade,
   XAPIResponse,
+  AbstractGraphqlService,
 } from "@ringdao/xapi-common";
 
-interface GraphqlQuery extends BasicGraphqlParams {
-  query: string;
-  variables?: Record<string, any>;
-}
 
-abstract class AbstractGraphqlService {
-  async post(query: GraphqlQuery) {
-    const options: any = {
-      query: query.query,
-    };
-    if (query.variables) {
-      options.variables = query.variables;
-    }
-    const response = await axios.post(query.endpoint, options, {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-    const { errors, data } = response.data;
-    if (errors) {
-      throw new Error(
-        `[${query.endpoint}] \n${JSON.stringify(
-          options,
-        )} \nresposne is: ${JSON.stringify(errors)}`,
-      );
-    }
-    // const gralphData = data.data;
-
-    // #### log
-    const logQuery = Tools.shortLog({
-      input: `> ${query.query
-        .replaceAll("   ", " ")
-        .trim()
-        .replaceAll("\n", "\n>")}`,
-      len: 50,
-    });
-    const logData = Tools.shortLog({
-      input: JSON.stringify(data),
-      len: 100,
-    });
-    logger.debug(`--> ${query.endpoint}\n${logQuery}\n${logData}`);
-    // #### log
-    return data;
-  }
-}
 
 @Service()
 export class EvmGraphqlService extends AbstractGraphqlService {

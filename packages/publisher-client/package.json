@@ -20,7 +20,6 @@
     "@ethereumjs/util": "^9.1.0",
     "@helixbridge/helixconf": "^1.1.16",
     "@ringdao/xapi-common": "0.0.1",
-    "axios": "^1.7.7",
     "bs58check": "^4.0.0",
     "commander": "^12.1.0",
     "elliptic": "^6.5.7",

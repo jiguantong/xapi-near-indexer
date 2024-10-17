@@ -66,4 +66,3 @@ dist
 out
 
 *.local.*
-*.tsbuildinfo
