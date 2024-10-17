@@ -121,7 +121,10 @@ export class NearI {
         'get_reporter_required',
         'get_staking_contract',
       ],
-      changeMethods: [],
+      changeMethods: [
+        'publish_external',
+        'sync_publish_config_to_remote'
+      ],
       useLocalViewExecution: false,
     });
   }

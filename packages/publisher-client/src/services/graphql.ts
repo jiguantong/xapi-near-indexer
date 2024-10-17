@@ -69,6 +69,7 @@ export class NearGraphqlService extends AbstractGraphqlService {
         reporter_reward_addresses
         id
         chain_id
+        aggregator
       }
     }
     `;

@@ -26,6 +26,7 @@ export interface XAPIResponse {
   id: string
   chain_id: string
   reporter_reward_addresses: string[]
+  aggregator?: string
 }
 
 export interface TopStaked {
