@@ -2,9 +2,11 @@
 
 import { base_decode } from 'near-api-js/lib/utils/serialize';
 import { ec as EC } from 'elliptic';
-import { keccak256 } from "viem";import hash from 'hash.js';
+import hash from 'hash.js';
 import bs58check from 'bs58check';
 import { sha3_256 } from 'js-sha3'
+
+const keccak256 = require('keccak256');
 
 // todo update root key in prod https://docs.near.org/build/chain-abstraction/chain-signatures
 const rootPublicKey = 'secp256k1:4NfTiv3UsGahebgTaHyD9vF8KYKMBnfd6kh94mK6xv8fGBiJB8TBtFMP5WWXz6B89Ac1fbpzPwAvoyQebemHFwx3';
