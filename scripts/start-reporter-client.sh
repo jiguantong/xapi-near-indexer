@@ -12,6 +12,7 @@ npm run build:offchain
 
 cd ${WORK_PATH}/packages/reporter-client
 
-export XPI_LOG_LEVEL=debug
+export XAPI_LOG_FULL=0
+export XAPI_LOG_LEVEL=debug
 
 node dist/main.js $@
