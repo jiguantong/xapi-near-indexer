@@ -18,77 +18,7 @@ import {
 } from "@ringdao/xapi-common";
 import { HelixChainConf } from "@helixbridge/helixconf";
 
-const xapiRequestsAbi = {
-  inputs: [
-    {
-      internalType: "uint256",
-      name: "",
-      type: "uint256",
-    },
-  ],
-  name: "requests",
-  outputs: [
-    {
-      internalType: "string",
-      name: "aggregator",
-      type: "string",
-    },
-    {
-      internalType: "string",
-      name: "requestData",
-      type: "string",
-    },
-    {
-      internalType: "address",
-      name: "requester",
-      type: "address",
-    },
-    {
-      internalType: "address",
-      name: "callbackContract",
-      type: "address",
-    },
-    {
-      internalType: "bytes4",
-      name: "callbackFunction",
-      type: "bytes4",
-    },
-    {
-      internalType: "enum RequestStatus",
-      name: "status",
-      type: "uint8",
-    },
-    {
-      internalType: "address",
-      name: "exAggregator",
-      type: "address",
-    },
-    {
-      components: [
-        {
-          internalType: "address[]",
-          name: "reporters",
-          type: "address[]",
-        },
-        {
-          internalType: "bytes",
-          name: "result",
-          type: "bytes",
-        },
-      ],
-      internalType: "struct ResponseData",
-      name: "response",
-      type: "tuple",
-    },
-    {
-      internalType: "uint256",
-      name: "payment",
-      type: "uint256",
-    },
-  ],
-  stateMutability: "view",
-  type: "function",
-};
+const xapiRequestsAbi = require('../abis/xapi-requests.abi.json');
 
 export interface StartOptions {
   targetChains: HelixChainConf[];
