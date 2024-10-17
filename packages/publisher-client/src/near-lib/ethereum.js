@@ -34,7 +34,7 @@ export class NearEthereum {
   }
 
   async getNonce(accountId) {
-    return await this.web3.eth.getTransactionCount(accountId);
+    return await this.web3.eth.getTransactionCount(accountId, "PENDING");
   }
 
   async getContractViewFunction(receiver, abi, methodName, args = []) {

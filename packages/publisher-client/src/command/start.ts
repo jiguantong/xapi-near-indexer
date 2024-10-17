@@ -130,6 +130,12 @@ export class PublisherStarter {
 
     async start(options: StartOptions) {
         while (true) {
+            if(options.targetChains.length == 0) {
+                logger.info(`!!! NO CHAIN, OVER ====`, {
+                    target: "publisher",
+                });
+                return;
+            }
             for (const chain of options.targetChains) {
                 const near = await this.near(options, chain);
                 const nearEthereum = this.getNearEthClient(chain);
@@ -185,7 +191,11 @@ export class PublisherStarter {
             });
             if (_request.stauts == 0) {
                 // 4. if status is pending, triggerPublish
-                this.triggerPublish(aggregated, lifecycle);
+                logger.info(`==> [${relatedRequest?.requestId}] triggerPublish`, {
+                    target: "publisher"
+                })
+                // this.triggerPublish(aggregated, lifecycle);
+                setTimeout(1000);
             }
         }
     }
