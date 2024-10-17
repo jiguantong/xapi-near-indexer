@@ -1,20 +1,19 @@
 import axios from "axios";
 import { Service } from "typedi";
 
-import { logger, Tools, XAPIResponse, RequestMade } from "@ringdao/xapi-common";
+import {
+  logger,
+  Tools,
+  XAPIResponse,
+  RequestMade,
+  BasicGraphqlParams,
+  QueryWithIds,
+} from "@ringdao/xapi-common";
 import chalk = require("chalk");
-
-export interface BasicGraphqlParams {
-  endpoint: string;
-}
 
 interface GraphqlQuery extends BasicGraphqlParams {
   query: string;
   variables?: Record<string, any>;
-}
-
-export interface QueryWithIds extends BasicGraphqlParams {
-  ids: string[];
 }
 
 export interface XAPIResponseParams extends QueryWithIds {
@@ -36,7 +35,11 @@ abstract class AbstractGraphqlService {
     });
     const { errors, data } = response.data;
     if (errors) {
-      throw new Error(`[${query.endpoint}] \n${JSON.stringify(options)} \nresposne is: ${JSON.stringify(errors)}`);
+      throw new Error(
+        `[${query.endpoint}] \n${JSON.stringify(
+          options,
+        )} \nresposne is: ${JSON.stringify(errors)}`,
+      );
     }
     // const gralphData = data.data;
 
