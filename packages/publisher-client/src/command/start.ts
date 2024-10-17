@@ -168,6 +168,7 @@ export class PublisherStarter {
 
     async runPublisher(lifecycle: PublisherLifecycle) {
         const { near, targetChain } = lifecycle;
+        console.log('=========>', this.evmGraphqlService);
         // 1. Fetch !fulfilled reqeust ids
         const nonfulfilled = await this.evmGraphqlService.queryTodoRequestMade({
             endpoint: XAPIConfig.graphql.endpoint(targetChain.code),

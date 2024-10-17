@@ -16,7 +16,7 @@
   "scripts": {
     "build:all": "lerna run build",
     "build:indexer": "lerna run build --scope=@ringdao/xapi-indexer-evm --scope=@ringdao/xapi-indexer-near",
-    "build:offchain": "lerna run build --scope=@ringdao/xapi-reporter-client --scope=@ringdao/xapi-common",
+    "build:offchain": "lerna run build --scope=@ringdao/xapi-reporter-client --scope=@ringdao/xapi-publisher-client --scope=@ringdao/xapi-common",
     "test": "lerna run test",
     "lint": "lerna run lint",
     "publish:npm": "lerna publish from-package --loglevel=silly --no-private --no-verify-access --yes -- --verbose"

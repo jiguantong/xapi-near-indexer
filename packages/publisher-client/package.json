@@ -1,5 +1,5 @@
 {
-  "name": "xapi-publisher",
+  "name": "@ringdao/xapi-publisher-client",
   "version": "0.0.1",
   "main": "dist/main.js",
   "license": "MIT",
