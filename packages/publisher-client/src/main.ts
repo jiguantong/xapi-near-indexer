@@ -16,20 +16,6 @@ program
 program
     .command("start")
     .description("start XAPI Publisher")
-    .option(
-        "-c, --chain <char>",
-        "target chain list",
-        (val: string, items: HelixChainConf[]) => {
-            if (!val) return items;
-            const chains: HelixChainConf[] = val
-                .split(",")
-                .map((item) => HelixChain.get(item))
-                .filter((item) => item != undefined);
-            items.push(...chains);
-            return items;
-        },
-        [],
-    )
     .action(async (options) => {
         logger.debug(`run with chains: ${options.chain.map((item: any) => item.code).join(', ')}`);
         const c = Container.get(PublisherStarter);

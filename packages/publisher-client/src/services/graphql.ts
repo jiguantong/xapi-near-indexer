@@ -7,6 +7,7 @@ import {
   RequestMade,
   XAPIResponse,
   AbstractGraphqlService,
+  Aggregator,
 } from "@ringdao/xapi-common";
 
 
@@ -81,5 +82,22 @@ export class NearGraphqlService extends AbstractGraphqlService {
       },
     });
     return data["aggregatedEvents"];
+  }
+
+  async queryAllAggregators(params: BasicGraphqlParams): Promise<Aggregator[]> {
+    const query = `
+    query AllAggregators {
+      aggregators(first: 100) {
+        id
+        supported_chains
+      }
+    }
+    `;
+    const data = await super.post({
+      ...params,
+      query,
+      variables: {},
+    });
+    return data["aggregators"];
   }
 }

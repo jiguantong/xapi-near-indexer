@@ -86,8 +86,7 @@ type SyncPublishChainConfigEvent @entity {
   aggregator: String!
 }
 
-type AllAggregator @entity {
+type Aggregator @entity {
   id: ID!
-  aggregator: String!
   supported_chains: [String!]!
 }

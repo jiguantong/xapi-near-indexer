@@ -12,7 +12,7 @@ import {
     NearW,
     MpcOptions, XAPIResponse, Signature, PublishChainConfig, RequestMade
 } from "@ringdao/xapi-common";
-import { HelixChainConf } from "@helixbridge/helixconf";
+import { HelixChain, HelixChainConf } from "@helixbridge/helixconf";
 
 import xapiAbi from "../abis/xapi.abi.json";
 import { assert } from 'console';
@@ -29,6 +29,7 @@ export interface PublisherLifecycle extends StartOptions {
     near: NearI;
     targetChain: HelixChainConf;
     nearEthereum: NearEthereum;
+    aggregator: string;
 }
 
 @Service()
@@ -66,39 +67,53 @@ export class PublisherStarter {
 
     async start(options: StartOptions) {
         while (true) {
-            if (options.targetChains.length == 0) {
-                logger.info(`!!! NO CHAIN, OVER ====`, {
-                    target: "publisher",
+            const allAggregators = await this.nearGraphqlService.queryAllAggregators({
+                endpoint: XAPIConfig.graphql.endpoint('near'),
+            });
+            console.log("allAggregators", allAggregators);
+            if (!allAggregators || allAggregators.length == 0) {
+                logger.info(`==== No aggregators, wait 60 seconds to continue ====`, {
+                    target: "main",
                 });
-                return;
+                await setTimeout(60000);
+                continue;
             }
-            for (const chain of options.targetChains) {
-                const near = await this.near(options, chain);
-                const nearEthereum = this.getNearEthClient(chain);
-                try {
-                    logger.info(`==== start publisher for [${chain.name}-${chain.id.toString()}] ====`, {
-                        target: "publisher",
-                    });
-                    await this.runPublisher({ ...options, near, targetChain: chain, nearEthereum });
+            for (const aggregator of allAggregators) {
+                for (const chainId of aggregator.supported_chains) {
+                    const chain = HelixChain.get(chainId);
+                    if (!chain) {
+                        logger.error(`Can't find chain: ${chainId}`, {
+                            target: "start"
+                        });
+                        continue;
+                    }
+                    const near = await this.near(options, chain);
+                    const nearEthereum = this.getNearEthClient(chain);
+                    try {
+                        logger.info(`==== start publisher for [${chain.name}-${chain.id.toString()}] ====`, {
+                            target: "publisher",
+                        });
+                        await this.runPublisher({ ...options, near, targetChain: chain, nearEthereum, aggregator: aggregator.id });
+                        await setTimeout(1000);
+                    } catch (e: any) {
+                        logger.error(`run publisher errored: ${e.stack || e}`, {
+                            target: "publisher",
+                        });
+                    }
+                    try {
+                        logger.info(`==== start config-syncer for [${chain.name}-${chain.id.toString()}] ====`, {
+                            target: "config-syncer",
+                        });
+                        await this.runConfigSyncer({ ...options, near, targetChain: chain, nearEthereum, aggregator: aggregator.id });
+                        await setTimeout(1000);
+                    } catch (e: any) {
+                        logger.error(`run ConfigSyncer errored: ${e.stack || e}`, {
+                            target: "config-syncer",
+                        });
+                    }
                     await setTimeout(1000);
-                } catch (e: any) {
-                    logger.error(`run publisher errored: ${e.stack || e}`, {
-                        target: "publisher",
-                    });
+                    return;
                 }
-                try {
-                    logger.info(`==== start config-syncer for [${chain.name}-${chain.id.toString()}] ====`, {
-                        target: "config-syncer",
-                    });
-                    await this.runConfigSyncer({ ...options, near, targetChain: chain, nearEthereum });
-                    await setTimeout(1000);
-                } catch (e: any) {
-                    logger.error(`run ConfigSyncer errored: ${e.stack || e}`, {
-                        target: "config-syncer",
-                    });
-                }
-                await setTimeout(1000);
-                return;
             }
         }
     }
@@ -106,7 +121,6 @@ export class PublisherStarter {
     async runPublisher(lifecycle: PublisherLifecycle) {
         const { near, targetChain } = lifecycle;
         // 1. Fetch !fulfilled reqeust ids
-        // todo how to handle too many timeout requests
         const nonfulfilled = await this.evmGraphqlService.queryTodoRequestMade({
             endpoint: XAPIConfig.graphql.endpoint(targetChain.code),
         });

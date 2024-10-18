@@ -68,11 +68,11 @@ export interface PublishEvent {
 }
 
 export interface SyncPublishChainConfigEvent {
-  id: String
-  chain_id: String
-  xapi_address: String
-  version: String
-  call_data: String
+  id: string
+  chain_id: string
+  xapi_address: string
+  version: string
+  call_data: string
   signature: Signature
   mpc_options: MpcOptions
   publish_chain_config: PublishChainConfig
@@ -80,10 +80,15 @@ export interface SyncPublishChainConfigEvent {
 }
 
 export interface MpcOptions {
-  id: String
+  id: string
   nonce: string
   gas_limit: string
   max_fee_per_gas: string
   max_priority_fee_per_gas: string
+}
+
+export interface Aggregator {
+  id: string
+  supported_chains: string[]
 }
 

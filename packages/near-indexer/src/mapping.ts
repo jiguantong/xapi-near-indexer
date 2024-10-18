@@ -1,5 +1,5 @@
 import { BigInt, log, near, json, TypedMap, JSONValue, JSONValueKind } from '@graphprotocol/graph-ts';
-import { Response, PublishChainConfig, PublishEvent, Signature, AggregatedEvent, SetPublishChainConfigEvent, MpcOptions, SyncPublishChainConfigEvent, AllAggregator } from '../generated/schema';
+import { Response, PublishChainConfig, PublishEvent, Signature, AggregatedEvent, SetPublishChainConfigEvent, MpcOptions, SyncPublishChainConfigEvent, Aggregator } from '../generated/schema';
 
 export function handleReceipt(receipt: near.ReceiptWithOutcome): void {
   const actions = receipt.receipt.actions;
@@ -124,11 +124,10 @@ function handleSetPublishChainConfig(logs: string[], blockHeader: near.BlockHead
 
 function syncAllAggregators(setPublishChainConfigEvent: SetPublishChainConfigEvent): void {
   const _aggregator = setPublishChainConfigEvent.aggregator;
-  let _loadAggregator = AllAggregator.load(_aggregator);
+  let _loadAggregator = Aggregator.load(_aggregator);
   if (!_loadAggregator) {
     log.debug("### New Aggregator: {}", [_aggregator]);
-    _loadAggregator = new AllAggregator(_aggregator);
-    _loadAggregator.aggregator = _aggregator;
+    _loadAggregator = new Aggregator(_aggregator);
     _loadAggregator.supported_chains = [setPublishChainConfigEvent.chain_id.toString()];
   } else {
     const _oldChains = _loadAggregator.supported_chains;
