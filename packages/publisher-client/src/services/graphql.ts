@@ -10,17 +10,22 @@ import {
   Aggregator,
 } from "@ringdao/xapi-common";
 
-
+export interface QueryWithAggregator extends BasicGraphqlParams {
+  aggregator: string,
+}
 
 @Service()
 export class EvmGraphqlService extends AbstractGraphqlService {
   async queryTodoRequestMade(
-    params: BasicGraphqlParams,
+    params: QueryWithAggregator,
   ): Promise<RequestMade[]> {
     const query = `
-    query QueryTodoRequestMades {
+    query QueryTodoRequestMades(
+      $aggregator: String,
+    )
+     {
       requestMades(
-        where: {fulfilled: 0},
+        where: {fulfilled: 0, aggregator: $aggregator},
         orderBy: id,
         orderDirection: asc,
         first: 50
@@ -44,6 +49,9 @@ export class EvmGraphqlService extends AbstractGraphqlService {
     const data = await super.post({
       ...params,
       query,
+      variables: {
+        aggregator: params.aggregator
+      }
     });
     return data["requestMades"];
   }

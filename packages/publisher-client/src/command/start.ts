@@ -89,6 +89,7 @@ export class PublisherStarter {
                     }
                     const near = await this.near(options, chain);
                     const nearEthereum = this.getNearEthClient(chain);
+
                     try {
                         logger.info(`==== start publisher for [${chain.name}-${chain.id.toString()}] ====`, {
                             target: "publisher",
@@ -100,6 +101,7 @@ export class PublisherStarter {
                             target: "publisher",
                         });
                     }
+
                     try {
                         logger.info(`==== start config-syncer for [${chain.name}-${chain.id.toString()}] ====`, {
                             target: "config-syncer",
@@ -123,6 +125,7 @@ export class PublisherStarter {
         // 1. Fetch !fulfilled reqeust ids
         const nonfulfilled = await this.evmGraphqlService.queryTodoRequestMade({
             endpoint: XAPIConfig.graphql.endpoint(targetChain.code),
+            aggregator: lifecycle.aggregator
         });
         // 2. Fetch aggregated events for nonfulfilled requests
         const aggregatedEvents =
@@ -131,7 +134,7 @@ export class PublisherStarter {
                 ids: nonfulfilled.map((item) => item.requestId),
             });
         const toPublishIds = aggregatedEvents.map(a => a.request_id);
-        logger.info(`### ==> Handle [${targetChain.name}-${targetChain.id.toString()}] toPublishIds: [${toPublishIds.length}], ${toPublishIds}`, {
+        logger.info(`### ==> Handle ${lifecycle.aggregator} [${targetChain.name}-${targetChain.id.toString()}] toPublishIds: [${toPublishIds.length}], ${toPublishIds}`, {
             target: "publisher",
         });
         // 3. Check request status on xapi contract
@@ -163,18 +166,21 @@ export class PublisherStarter {
     }
 
     async triggerPublish(aggregated: XAPIResponse, relatedRequest: RequestMade, lifecycle: PublisherLifecycle) {
-        // todo check if the response is timeout, read timeout config from aggregator
-
         // Derive address
         const deriveAddress = await this.deriveXAPIAddress(aggregated.aggregator!, lifecycle);
         logger.info(`===> deriveAddress: ${deriveAddress}`, {
             target: "triggerPublish",
         });
         // console.log("estimate", relatedRequest.xapiAddress, relatedRequest.requestId, aggregated.valid_reporters, aggregated.result)
-        const gasLimit = await lifecycle.nearEthereum.estimateGas(relatedRequest.xapiAddress, xapiAbi, "fulfill",
+        let gasLimit = await lifecycle.nearEthereum.estimateGas(relatedRequest.xapiAddress, xapiAbi, "fulfill",
             [relatedRequest.requestId, [aggregated.reporter_reward_addresses, lifecycle.nearEthereum.stringToBytes(aggregated.result)]],
             deriveAddress
         );
+        if (gasLimit) {
+            gasLimit = gasLimit * BigInt(3) / BigInt(2);
+        } else {
+            gasLimit = 500000;
+        }
         logger.info(`===> gasLimit: ${gasLimit}`, {
             target: "triggerPublish",
         });
@@ -187,7 +193,9 @@ export class PublisherStarter {
         logger.info(`===> balance: ${balance}`, {
             target: "triggerPublish",
         });
-        const { maxFeePerGas, maxPriorityFeePerGas } = await lifecycle.nearEthereum.queryGasPrice();
+        let { maxFeePerGas, maxPriorityFeePerGas } = await lifecycle.nearEthereum.queryGasPrice();
+        maxFeePerGas = (BigInt(maxFeePerGas) * BigInt(3) / BigInt(2)).toString();
+        maxPriorityFeePerGas = (BigInt(maxPriorityFeePerGas) * BigInt(3) / BigInt(2)).toString();
         logger.info(`===> maxFeePerGas: ${maxFeePerGas}, maxPriorityFeePerGas: ${maxPriorityFeePerGas}`, {
             target: "triggerPublish",
         });
@@ -201,11 +209,28 @@ export class PublisherStarter {
                     mpc_options: { nonce: nonce.toString(), gas_limit: gasLimit.toString(), max_fee_per_gas: maxFeePerGas.toString(), max_priority_fee_per_gas: maxPriorityFeePerGas.toString() }
                 },
                 gas: "300000000000000",
+                // todo read from aggregator mpc config
                 amount: "1000000000000000000000000"
             }
         );
         console.log("publish result", result);
         // todo if published, relay
+        if (result && result.signature) {
+            const _signature = JSON.parse(result.signature);
+            try {
+                await this.relayMpcTx(result.response.chain_id, result.chain_config.xapi_address, result.call_data, {
+                    id: "0",
+                    big_r_affine_point: _signature.big_r.affine_point,
+                    s_scalar: _signature.s.scalar,
+                    recovery_id: 0
+                }, result.mpc_options, lifecycle);
+            } catch (e) {
+                console.log(e);
+                // @ts-ignore
+                console.log(e.reason);
+            }
+        }
+        // todo handle exeeded the prepaid gas error:   2024-10-18T07:01:57Z | [  publisher   ] run publisher errored: Error: {"index":0,"kind":{"index":0,"kind":{"FunctionCallError":{"ExecutionError":"Exceeded the prepaid gas."}}}}
         // todo if timeout, wait and find published evnet and relay
     }
 
@@ -237,7 +262,7 @@ export class PublisherStarter {
             to: contract,
             data: calldata as any,
             value: 0,
-        }, { common: new Common({ chain: chainId }) })
+        }, { common: new Common({ chain: BigInt(chainId) }) })
 
         // console.log("### transaction", transaction);
 

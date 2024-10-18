@@ -17,7 +17,6 @@ program
     .command("start")
     .description("start XAPI Publisher")
     .action(async (options) => {
-        logger.debug(`run with chains: ${options.chain.map((item: any) => item.code).join(', ')}`);
         const c = Container.get(PublisherStarter);
         await c.start({
             targetChains: options.chain,
