@@ -85,3 +85,9 @@ type SyncPublishChainConfigEvent @entity {
   mpc_options: MpcOptions!
   aggregator: String!
 }
+
+type AllAggregator @entity {
+  id: ID!
+  aggregator: String!
+  supported_chains: [String!]!
+}
