@@ -106,6 +106,7 @@ export class PublisherStarter {
     async runPublisher(lifecycle: PublisherLifecycle) {
         const { near, targetChain } = lifecycle;
         // 1. Fetch !fulfilled reqeust ids
+        // todo how to handle too many timeout requests
         const nonfulfilled = await this.evmGraphqlService.queryTodoRequestMade({
             endpoint: XAPIConfig.graphql.endpoint(targetChain.code),
         });
@@ -148,6 +149,8 @@ export class PublisherStarter {
     }
 
     async triggerPublish(aggregated: XAPIResponse, relatedRequest: RequestMade, lifecycle: PublisherLifecycle) {
+        // todo check if the response is timeout, read timeout config from aggregator
+
         // Derive address
         const deriveAddress = await this.deriveXAPIAddress(aggregated.aggregator!, lifecycle);
         logger.info(`===> deriveAddress: ${deriveAddress}`, {
@@ -175,7 +178,6 @@ export class PublisherStarter {
             target: "triggerPublish",
         });
         // call Aggregator publish_external()
-        // todo timeout due to GFW
         // @ts-ignore
         const result = await lifecycle.near.contractAggregator(aggregated.aggregator!).publish_external(
             {
