@@ -79,6 +79,7 @@ export class NearGraphqlService extends AbstractGraphqlService {
         id
         chain_id
         aggregator
+        error_code
       }
     }
     `;

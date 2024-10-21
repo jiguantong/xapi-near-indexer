@@ -102,6 +102,11 @@
             "internalType": "bytes",
             "name": "result",
             "type": "bytes"
+          },
+          {
+            "internalType": "uint16",
+            "name": "errorCode",
+            "type": "uint16"
           }
         ],
         "indexed": false,
@@ -183,6 +188,24 @@
         "internalType": "address",
         "name": "requester",
         "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "exAggregator",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "reportersFee",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "publishFee",
+        "type": "uint256"
       }
     ],
     "name": "RequestMade",
@@ -259,25 +282,6 @@
         "internalType": "uint256",
         "name": "requestId",
         "type": "uint256"
-      }
-    ],
-    "name": "decodeChainId",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "pure",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "requestId",
-        "type": "uint256"
       },
       {
         "components": [
@@ -290,6 +294,11 @@
             "internalType": "bytes",
             "name": "result",
             "type": "bytes"
+          },
+          {
+            "internalType": "uint16",
+            "name": "errorCode",
+            "type": "uint16"
           }
         ],
         "internalType": "struct ResponseData",
@@ -305,6 +314,11 @@
   {
     "inputs": [
       {
+        "internalType": "address",
+        "name": "exAggregator",
+        "type": "address"
+      },
+      {
         "internalType": "string",
         "name": "requestData",
         "type": "string"
@@ -313,11 +327,6 @@
         "internalType": "bytes4",
         "name": "callbackFunction",
         "type": "bytes4"
-      },
-      {
-        "internalType": "address",
-        "name": "exAggregator",
-        "type": "address"
       }
     ],
     "name": "makeRequest",
@@ -433,6 +442,11 @@
             "internalType": "bytes",
             "name": "result",
             "type": "bytes"
+          },
+          {
+            "internalType": "uint16",
+            "name": "errorCode",
+            "type": "uint16"
           }
         ],
         "internalType": "struct ResponseData",
