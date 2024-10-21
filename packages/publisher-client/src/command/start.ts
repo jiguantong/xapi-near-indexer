@@ -91,6 +91,18 @@ export class PublisherStarter {
                     const nearEthereum = this.getNearEthClient(chain);
 
                     try {
+                        logger.info(`==== start config-syncer for [${chain.name}-${chain.id.toString()}] ====`, {
+                            target: "config-syncer",
+                        });
+                        await this.runConfigSyncer({ ...options, near, targetChain: chain, nearEthereum, aggregator: aggregator.id });
+                        await setTimeout(1000);
+                    } catch (e: any) {
+                        logger.error(`run ConfigSyncer errored: ${e.stack || e}`, {
+                            target: "config-syncer",
+                        });
+                    }
+
+                    try {
                         logger.info(`==== start publisher for [${chain.name}-${chain.id.toString()}] ====`, {
                             target: "publisher",
                         });
@@ -102,17 +114,6 @@ export class PublisherStarter {
                         });
                     }
 
-                    try {
-                        logger.info(`==== start config-syncer for [${chain.name}-${chain.id.toString()}] ====`, {
-                            target: "config-syncer",
-                        });
-                        await this.runConfigSyncer({ ...options, near, targetChain: chain, nearEthereum, aggregator: aggregator.id });
-                        await setTimeout(1000);
-                    } catch (e: any) {
-                        logger.error(`run ConfigSyncer errored: ${e.stack || e}`, {
-                            target: "config-syncer",
-                        });
-                    }
                     await setTimeout(1000);
                     return;
                 }
@@ -150,19 +151,49 @@ export class PublisherStarter {
                     target: "publisher"
                 })
                 await this.triggerPublish(aggregated, relatedRequest!, lifecycle);
-                setTimeout(3000);
+                await setTimeout(3000);
             }
         }
     }
 
     async runConfigSyncer(lifecycle: PublisherLifecycle) {
-        // Fetch latest SetPublishChainConfigEvent from near indexer for chainid
-        // Fetch AggregatorConfigSet event from evm indexer
-        // if the version doesn't exist on target chain
-        // Check chain config state on xapi contract
-        // if version < this version triggerSyncConfig
-        // if result, relayMpc
-        // if timeout, wait and then relay
+        const { near, targetChain } = lifecycle;
+
+        // 1. Fetch latest SetPublishChainConfigEvent from near indexer for chainid
+        const latestConfigFromNear =
+            await this.nearGraphqlService.queryLatestPublishConfig({
+                endpoint: XAPIConfig.graphql.endpoint('near'),
+                chainId: lifecycle.targetChain.id,
+                aggregator: lifecycle.aggregator
+            });
+        if (!latestConfigFromNear) {
+            logger.warn(`==> [${targetChain.name}-${targetChain.id.toString()}] No publish config for ${lifecycle.aggregator}`, {
+                target: "config-syncer",
+            });
+            return;
+        }
+        // 2. Fetch AggregatorConfigSet event from evm indexer
+        const latestConfigFromEvm = await this.evmGraphqlService.queryAggregatorConfig({
+            endpoint: XAPIConfig.graphql.endpoint(targetChain.code),
+            aggregator: lifecycle.aggregator,
+            version: BigInt(latestConfigFromNear.version)
+        });
+        if (latestConfigFromEvm && latestConfigFromEvm.version >= latestConfigFromNear.version) {
+            logger.info(`==> [${targetChain.name}-${targetChain.id.toString()}] ${lifecycle.aggregator}, near: ${latestConfigFromNear.version}, evm: ${latestConfigFromEvm?.version}`, {
+                target: "config-syncer",
+            });
+            // No synchronization required
+            return;
+        }
+        // 3. Double check chain config state on xapi contract
+        const exAggregator = await this.deriveXAPIAddress(lifecycle.aggregator, lifecycle);
+        const aggregatorConfigEvm = await lifecycle.nearEthereum.getContractViewFunction(latestConfigFromNear.xapi_address, xapiAbi, "aggregatorConfigs", [exAggregator]);
+        if (aggregatorConfigEvm.version >= latestConfigFromNear.version) {
+            return;
+        }
+        // Then, need to trigger sync
+        await this.triggerSyncConfig(latestConfigFromNear, lifecycle);
+        await setTimeout(3000);
     }
 
     async triggerPublish(aggregated: XAPIResponse, relatedRequest: RequestMade, lifecycle: PublisherLifecycle) {
@@ -172,15 +203,16 @@ export class PublisherStarter {
             target: "triggerPublish",
         });
         // console.log("estimate", relatedRequest.xapiAddress, relatedRequest.requestId, aggregated.valid_reporters, aggregated.result)
-        let gasLimit = await lifecycle.nearEthereum.estimateGas(relatedRequest.xapiAddress, xapiAbi, "fulfill",
-            [relatedRequest.requestId, [aggregated.reporter_reward_addresses, lifecycle.nearEthereum.stringToBytes(aggregated.result), aggregated.error_code]],
-            deriveAddress
-        );
-        if (gasLimit) {
-            gasLimit = gasLimit * BigInt(3) / BigInt(2);
-        } else {
-            gasLimit = 500000;
+        let gasLimit = 500_000n;
+        try {
+            gasLimit = await lifecycle.nearEthereum.estimateGas(relatedRequest.xapiAddress, xapiAbi, "fulfill",
+                [relatedRequest.requestId, [aggregated.reporter_reward_addresses, lifecycle.nearEthereum.stringToBytes(aggregated.result), aggregated.error_code]],
+                deriveAddress
+            );
+        } catch (e) {
+            console.log("triggerPublish, estimate gas error", e);
         }
+
         logger.info(`===> gasLimit: ${gasLimit}`, {
             target: "triggerPublish",
         });
@@ -201,6 +233,11 @@ export class PublisherStarter {
         });
         // call Aggregator publish_external()
         // @ts-ignore
+        const mpcConfig = await lifecycle.near.contractAggregator(aggregated.aggregator!).get_mpc_config();
+        logger.info(`===> mpcConfig: ${JSON.stringify(mpcConfig)}`, {
+            target: "triggerSyncConfig",
+        });
+        // @ts-ignore
         const result = await lifecycle.near.contractAggregator(aggregated.aggregator!).publish_external(
             {
                 signerAccount: new NearAccount(lifecycle.near.near.connection, lifecycle.nearAccount),
@@ -209,11 +246,10 @@ export class PublisherStarter {
                     mpc_options: { nonce: nonce.toString(), gas_limit: gasLimit.toString(), max_fee_per_gas: maxFeePerGas.toString(), max_priority_fee_per_gas: maxPriorityFeePerGas.toString() }
                 },
                 gas: "300000000000000",
-                // todo read from aggregator mpc config
-                amount: "1000000000000000000000000"
+                amount: mpcConfig.attached_balance
             }
         );
-        console.log("publish result", result);
+        console.log("publish_external result", result);
         // todo if published, relay
         if (result && result.signature) {
             const _signature = JSON.parse(result.signature);
@@ -226,8 +262,6 @@ export class PublisherStarter {
                 }, result.mpc_options, lifecycle);
             } catch (e) {
                 console.log(e);
-                // @ts-ignore
-                console.log(e.reason);
             }
         }
         // todo handle exeeded the prepaid gas error:   2024-10-18T07:01:57Z | [  publisher   ] run publisher errored: Error: {"index":0,"kind":{"index":0,"kind":{"FunctionCallError":{"ExecutionError":"Exceeded the prepaid gas."}}}}
@@ -235,22 +269,73 @@ export class PublisherStarter {
     }
 
     async triggerSyncConfig(publishChainConfig: PublishChainConfig, lifecycle: PublisherLifecycle) {
-        const chainId = publishChainConfig.chain_id;
-
-        // todo Fetch XAPI address from near chain config
-        const xapiAddress = Address.fromString("0x6984ebE378F8cb815546Cb68a98807C1fA121A81");
-
-        // todo Estimate gasLimit
-        const gasLimit = 500000;
-
         // Derive address
         const deriveAddress = await this.deriveXAPIAddress(publishChainConfig.aggregator!, lifecycle);
-        const nonce = await lifecycle.nearEthereum.getNonce(deriveAddress);
-        const balance = await lifecycle.nearEthereum.getBalance(deriveAddress);
-        const { maxFeePerGas, maxPriorityFeePerGas } = await lifecycle.nearEthereum.queryGasPrice();
+        logger.info(`===> deriveAddress: ${deriveAddress}`, {
+            target: "triggerSyncConfig",
+        });
+        let gasLimit = 500_000n;
+        try {
+            gasLimit = await lifecycle.nearEthereum.estimateGas(publishChainConfig.xapi_address, xapiAbi, "setAggregatorConfig",
+                [publishChainConfig.aggregator, publishChainConfig.reporters_fee, publishChainConfig.publish_fee, publishChainConfig.reward_address, publishChainConfig.version],
+                deriveAddress
+            );
+        } catch (e) {
+            console.log("triggerSyncConfig, estimate gas error", e);
+        }
 
+        logger.info(`===> gasLimit: ${gasLimit}`, {
+            target: "triggerSyncConfig",
+        });
+        const nonce = await lifecycle.nearEthereum.getNonce(deriveAddress);
+        logger.info(`===> nonce: ${nonce}`, {
+            target: "triggerSyncConfig",
+        });
+        const balance = await lifecycle.nearEthereum.getBalance(deriveAddress);
+        // todo check if fee is enough
+        logger.info(`===> balance: ${balance}`, {
+            target: "triggerSyncConfig",
+        });
+        let { maxFeePerGas, maxPriorityFeePerGas } = await lifecycle.nearEthereum.queryGasPrice();
+        maxFeePerGas = (BigInt(maxFeePerGas) * BigInt(3) / BigInt(2)).toString();
+        maxPriorityFeePerGas = (BigInt(maxPriorityFeePerGas) * BigInt(3) / BigInt(2)).toString();
+        logger.info(`===> maxFeePerGas: ${maxFeePerGas}, maxPriorityFeePerGas: ${maxPriorityFeePerGas}`, {
+            target: "triggerSyncConfig",
+        });
         // call Aggregator sync_publish_config_to_remote()
-        (publishChainConfig.chain_id, { mpc_options: { nonce, gas_limit: gasLimit, max_fee_per_gas: maxFeePerGas, max_priority_fee_per_gas: maxPriorityFeePerGas } });
+        // @ts-ignore
+        const mpcConfig = await lifecycle.near.contractAggregator(publishChainConfig.aggregator!).get_mpc_config();
+        logger.info(`===> mpcConfig: ${JSON.stringify(mpcConfig)}`, {
+            target: "triggerSyncConfig",
+        });
+        // @ts-ignore
+        const result = await lifecycle.near.contractAggregator(publishChainConfig.aggregator!).sync_publish_config_to_remote(
+            {
+                signerAccount: new NearAccount(lifecycle.near.near.connection, lifecycle.nearAccount),
+                args: {
+                    chain_id: publishChainConfig.chain_id,
+                    mpc_options: { nonce: nonce.toString(), gas_limit: gasLimit.toString(), max_fee_per_gas: maxFeePerGas.toString(), max_priority_fee_per_gas: maxPriorityFeePerGas.toString() }
+                },
+                gas: "300000000000000",
+                amount: mpcConfig.attached_balance
+            }
+        );
+        console.log("sync_publish_config_to_remote result", result);
+        // todo if succeed, relay
+        if (result && result.signature) {
+            const _signature = JSON.parse(result.signature);
+            try {
+                await this.relayMpcTx(result.response.chain_id, result.chain_config.xapi_address, result.call_data, {
+                    id: "0",
+                    big_r_affine_point: _signature.big_r.affine_point,
+                    s_scalar: _signature.s.scalar,
+                    recovery_id: 0
+                }, result.mpc_options, lifecycle);
+            } catch (e) {
+                console.log(e);
+            }
+        }
+        // todo if timeout, wait and find published evnet and relay
     }
 
     async relayMpcTx(chainId: string, contract: Address, calldata: string, signature: Signature, mpcOptions: MpcOptions, lifecycle: PublisherLifecycle) {

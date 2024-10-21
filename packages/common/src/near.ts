@@ -120,6 +120,7 @@ export class NearI {
         'get_response',
         'get_reporter_required',
         'get_staking_contract',
+        'get_mpc_config',
       ],
       changeMethods: [
         'publish_external',
