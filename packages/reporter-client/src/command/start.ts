@@ -24,11 +24,14 @@ import {
   TopStaked,
 } from "@ringdao/xapi-common";
 import { HelixChain, HelixChainConf } from "@helixbridge/helixconf";
+import { KeyPairString } from "near-api-js/lib/utils";
 
 export interface BaseStartOptions {}
 
 export interface StartOptions extends BaseStartOptions {
   rewardAddress: string;
+  nearAccount: string;
+  nearPrivateKey: KeyPairString;
 }
 
 export interface ReporterLifecycle extends StartOptions {
@@ -60,9 +63,8 @@ export class XAPIExporterStarter {
     const near = await nw.init({
       networkId,
       account: {
-        privateKey:
-          "secp256k1:by8kdJoJHu7uUkKfoaLd2J2Dp1q1TigeWMG123pHdu9UREqPcshCM223kWadm",
-        accountId: "guantong.testnet",
+        privateKey: options.nearPrivateKey,
+        accountId: options.nearAccount,
       },
     });
     this._nearInstance[networkId] = near;

@@ -16,16 +16,30 @@ program
     "--reward-address <char>",
     "reward address (target chain address)",
   )
+  .requiredOption(
+    "--near-account <char>",
+    "near account",
+    process.env["XAPI_NEAR_ACCOUNT"],
+  )
+  .requiredOption(
+    "--near-private-key <char>",
+    "near private key",
+    process.env["XAPI_NEAR_PRIVATE_KEY"],
+  )
   .action(async (options) => {
     const c = Container.get(XAPIExporterStarter);
     const startOptions: StartOptions = {
       rewardAddress: options.rewardAddress,
+      nearAccount: options.nearAccount,
+      nearPrivateKey: options.nearPrivateKey,
     };
     await c.start(startOptions);
   });
 
 program.parse(process.argv);
 
-process.on('uncaughtException', (error) => {
-  logger.error(`detected uncaught exception: ${error.message}`, {target: 'reporter'});
-})
+process.on("uncaughtException", (error) => {
+  logger.error(`detected uncaught exception: ${error.message}`, {
+    target: "reporter",
+  });
+});
