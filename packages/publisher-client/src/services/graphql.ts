@@ -16,11 +16,11 @@ export interface QueryWithAggregator extends BasicGraphqlParams {
 }
 
 export interface QueryWithPublishChain extends QueryWithAggregator {
-  chainId: bigint
+  chainId: string
 }
 
 export interface QueryWithVersion extends QueryWithAggregator {
-  version: bigint
+  version: string
 }
 
 @Service()
