@@ -108,6 +108,7 @@ export class NearGraphqlService extends AbstractGraphqlService {
       const pd = data["aggregators"];
       if (!pd || !pd.length) break;
       aggregators.push(...pd);
+      skip = skip + first;
     }
     return aggregators;
   }

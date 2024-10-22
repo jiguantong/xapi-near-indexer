@@ -23,12 +23,12 @@ import {
   XAPIResponse,
   TopStaked,
 } from "@ringdao/xapi-common";
-import { HelixChainConf } from "@helixbridge/helixconf";
+import { HelixChain, HelixChainConf } from "@helixbridge/helixconf";
 
 export interface BaseStartOptions {}
 
 export interface StartOptions extends BaseStartOptions {
-  targetChains: HelixChainConf[];
+  rewardAddress: string;
 }
 
 export interface ReporterLifecycle extends StartOptions {
@@ -40,6 +40,8 @@ export interface ReporterLifecycle extends StartOptions {
 export class XAPIExporterStarter {
   private _nearInstance: Record<string, NearI> = {};
   private _aggregatorStakingMap: Record<string, string> = {};
+  private readonly _nearGraphqlEndpoint: string =
+    XAPIConfig.graphql.endpoint("near");
 
   constructor(
     private evmGraphqlService: EvmGraphqlService,
@@ -68,9 +70,24 @@ export class XAPIExporterStarter {
   }
 
   async start(options: StartOptions) {
-    try {
-      while (true) {
-        for (const chain of options.targetChains) {
+    while (true) {
+      try {
+        const aggregators = await this.nearGraphqlService.queryAggregators({
+          endpoint: this._nearGraphqlEndpoint,
+        });
+        const targetChainIds: string[] = [];
+        for (const aggregator of aggregators) {
+          const scs = aggregator.supported_chains;
+          for (const sc of scs) {
+            if (targetChainIds.indexOf(sc) !== -1) continue;
+            targetChainIds.push(sc);
+          }
+        }
+        const targetChains = targetChainIds
+          .map((item) => HelixChain.get(item))
+          .filter((item) => item != undefined);
+
+        for (const chain of targetChains) {
           try {
             const near = await this.near(options, chain);
             logger.info(`==== start reporter for ${chain.code} ====`, {
@@ -88,11 +105,12 @@ export class XAPIExporterStarter {
           }
         }
         await setTimeout(1000);
+      } catch (e: any) {
+        logger.error(`failed to start reporter: ${e.stack || e}`, {
+          target: "reporter",
+        });
+        await setTimeout(3000);
       }
-    } catch (e: any) {
-      logger.error(`failed to start reporter: ${e.stack || e}`, {
-        target: "reporter",
-      });
     }
   }
 
@@ -119,7 +137,7 @@ export class XAPIExporterStarter {
     });
     const aggregatedEvents =
       await this.nearGraphqlService.queryAggregatedeEvents({
-        endpoint: XAPIConfig.graphql.endpoint("near"),
+        endpoint: this._nearGraphqlEndpoint,
         ids: waites.map((item) => item.requestId),
       });
 
@@ -128,64 +146,99 @@ export class XAPIExporterStarter {
         !aggregatedEvents.find((agg) => agg.request_id === wait.requestId),
     );
 
-    const ag = near.contractAggregator("ormpaggregator.guantong.testnet");
-    // @ts-ignore
-    const reporterRequired: ReporterRequired = await ag.get_reporter_required();
-
-    const sc = await this._stakingContract(
-      lifecycle,
-      "ormpaggregator.guantong.testnet",
-    );
-    // @ts-ignore
-    const topStakeds: TopStaked[] = await sc.get_top_staked({
-      top: reporterRequired.quorum,
-    });
-    const includeMyself = topStakeds.find(
-      (item) => item.account_id.toLowerCase() === near.accountId.toLowerCase(),
-    );
-
-    if (!includeMyself) {
-      return;
-    }
-
-    // @ts-ignore
-    const datasources = await ag.get_data_sources();
-    const answers = await this.fetchApi(datasources, waites[0]);
-    const report: Report = {
-      request_id: waites[0].requestId,
-      reward_address: "0x884b578c8a7e05c10b48fa247fbb0b16d668f2dd",
-      answers,
-    };
-    // @ts-ignore
-    const estimatedReportDeposit = await ag.estimate_report_deposit(report);
-    // @ts-ignore
-    const reported = await ag.report({
-      signerAccount: near.nearAccount(),
-      args: report,
-      gas: "300000000000000",
-      amount: estimatedReportDeposit,
-    });
-    console.log(reported);
-
-    // const reporterRequired: Record<string, any> = {};
-    // for (const todo of possibleTodos) {
-    //   if (reporterRequired[todo.aggregator]) continue;
-    //   reporterRequired[todo.aggregator] = {
-
-    //   };
-    // }
-
-    const todos = [];
+    const todos: RequestMade[] = [];
     for (const todo of possibleTodos) {
       const aggeregator = near.contractAggregator(todo.aggregator);
       // @ts-ignore
       const response: XAPIResponse = await aggeregator.get_response({
         request_id: todo.requestId,
       });
-      // if (response.status !== "FETCHING") continue;
-      // todos.push(todo);
+      if (response.status !== "FETCHING") continue;
+      todos.push(todo);
     }
-    // console.log(todos);
+    if (!todos.length) {
+      logger.debug("not have any todo jobs", { target: "report" });
+      return;
+    }
+
+    for (const todo of todos) {
+      const aggregator = near.contractAggregator(todo.aggregator);
+      const reporterRequired: ReporterRequired =
+        // @ts-ignore
+        await aggregator.get_reporter_required();
+
+      const stakingContract = await this._stakingContract(
+        lifecycle,
+        todo.aggregator,
+      );
+
+      // @ts-ignore
+      const topStakeds: TopStaked[] = await stakingContract.get_top_staked({
+        top: reporterRequired.quorum,
+      });
+
+      const includeMyself = topStakeds.find(
+        (item) =>
+          item.account_id.toLowerCase() === near.accountId.toLowerCase(),
+      );
+
+      if (!includeMyself) {
+        continue;
+      }
+      // @ts-ignore
+      const datasources: Datasource[] = await aggregator.get_data_sources();
+      if (!datasources || !datasources.length) {
+        logger.debug(`missing datasource for [${todo.aggregator}] skip this`, {
+          target: "reporter",
+        });
+        continue;
+      }
+
+      let reported: any;
+      try {
+        const answers = await this.fetchApi(datasources, todo);
+        const report: Report = {
+          request_id: todo.requestId,
+          reward_address: lifecycle.rewardAddress,
+          answers,
+        };
+        // @ts-ignore
+        const reporteDeposit = await aggregator.estimate_report_deposit(report);
+        // @ts-ignore
+        reported = await aggregator.report({
+          signerAccount: near.nearAccount(),
+          args: report,
+          gas: "300000000000000",
+          amount: reporteDeposit,
+        });
+      } catch (e: any) {
+        const answers: Answer[] = [];
+        for (const ds of datasources) {
+          answers.push({
+            data_source_name: ds.name,
+            error: Tools.ellipsisText({
+              text: `${e.message || e.msg || "ERROR_REPORT"}`,
+              len: 480,
+            }),
+          });
+        }
+        const report: Report = {
+          request_id: todo.requestId,
+          reward_address: lifecycle.rewardAddress,
+          answers,
+        };
+        // @ts-ignore
+        const reporteDeposit = await aggregator.estimate_report_deposit(report);
+        // @ts-ignore
+        reported = await aggregator.report({
+          signerAccount: near.nearAccount(),
+          args: report,
+          gas: "300000000000000",
+          amount: reporteDeposit,
+        });
+      }
+      console.log(reported);
+    }
 
     logger.debug(lifecycle.targetChain.code, {
       target: "reporter",
