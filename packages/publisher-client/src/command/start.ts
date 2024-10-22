@@ -259,22 +259,24 @@ export class PublisherStarter {
             if (result && result.signature) {
                 const _signature = JSON.parse(result.signature);
                 try {
-                    await this.relayMpcTx(result.response.chain_id, result.chain_config.xapi_address, result.call_data, {
+                    await this.relayMpcTx(result.response.chain_id, Address.fromString(result.chain_config.xapi_address), result.call_data, {
                         id: "0",
                         big_r_affine_point: _signature.big_r.affine_point,
                         s_scalar: _signature.s.scalar,
-                        recovery_id: 0
+                        recovery_id: _signature.recovery_id
                     }, result.mpc_options, lifecycle);
                 } catch (e) {
-                    console.log("relay publish mpc error", e);
+                    console.log(e);
+                    // @ts-ignore
+                    logger.error(`===> relayMpcTx error: ${JSON.stringify(e.cause)}, ${e.reason}`, {
+                        target: "triggerPublish",
+                    });
                 }
             }
         } catch (e) {
+            // todo if timeout, wait and find published event and relay
             console.log("publish error", e);
         }
-
-        // todo handle exeeded the prepaid gas error:   2024-10-18T07:01:57Z | [  publisher   ] run publisher errored: Error: {"index":0,"kind":{"index":0,"kind":{"FunctionCallError":{"ExecutionError":"Exceeded the prepaid gas."}}}}
-        // todo if timeout, wait and find published evnet and relay
     }
 
     async triggerSyncConfig(publishChainConfig: PublishChainConfig, lifecycle: PublisherLifecycle) {
@@ -339,16 +341,19 @@ export class PublisherStarter {
                         id: "0",
                         big_r_affine_point: _signature.big_r.affine_point,
                         s_scalar: _signature.s.scalar,
-                        recovery_id: 0
+                        recovery_id: _signature.recovery_id
                     }, result.mpc_options, lifecycle);
                 } catch (e) {
-                    console.log("relay sync config mpc error", e);
+                    // @ts-ignore
+                    logger.error(`===> relayMpcTx error: ${JSON.stringify(e.cause)}, ${e.reason}`, {
+                        target: "triggerSyncConfig",
+                    });
                 }
             }
         } catch (e) {
+            // todo if timeout, wait and find synced event and relay
             console.log("sync config error", e);
         }
-        // todo if timeout, wait and find published evnet and relay
     }
 
     async relayMpcTx(chainId: string, contract: Address, calldata: string, signature: Signature, mpcOptions: MpcOptions, lifecycle: PublisherLifecycle) {
