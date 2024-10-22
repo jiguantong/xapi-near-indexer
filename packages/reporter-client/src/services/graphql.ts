@@ -6,6 +6,7 @@ import {
   BasicGraphqlParams,
   QueryWithIds,
   AbstractGraphqlService,
+  Aggregator,
 } from "@ringdao/xapi-common";
 import chalk = require("chalk");
 
@@ -81,5 +82,33 @@ export class NearGraphqlService extends AbstractGraphqlService {
       },
     });
     return data["aggregatedEvents"];
+  }
+
+  async queryAggregators(params: BasicGraphqlParams): Promise<Aggregator[]> {
+    const query = `
+    query QueryAggregators($first: Int!, $skip: Int!) {
+      aggregators(first: $first, skip: $skip) {
+        supported_chains
+        id
+      }
+    }
+    `;
+    const first = 100;
+    let skip = 0;
+    const aggregators: Aggregator[] = [];
+    while (true) {
+      const data = await super.post({
+        ...params,
+        query,
+        variables: {
+          first,
+          skip,
+        },
+      });
+      const pd = data["aggregators"];
+      if (!pd || !pd.length) break;
+      aggregators.push(...pd);
+    }
+    return aggregators;
   }
 }

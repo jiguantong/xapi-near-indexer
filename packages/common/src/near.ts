@@ -5,6 +5,7 @@ import {
 } from "near-api-js/lib/providers";
 import { ContractMethods } from "near-api-js/lib/contract";
 import { KeyPairString } from "near-api-js/lib/utils";
+import { Account as NearAccount } from 'near-api-js';
 
 export interface NearContractOptions {
   contractId: string;
@@ -107,6 +108,10 @@ export class NearI {
     return this.walletConnection;
   }
 
+  public nearAccount(): NearAccount {
+    return new NearAccount(this.near.connection, this.accountId);
+  }
+
   public contract(contractId: string, options: ContractMethods): nearAPI.Contract {
     const cachedContract = this.contractMap[contractId];
     if (cachedContract) {
@@ -129,10 +134,12 @@ export class NearI {
         'get_staking_contract',
         'get_data_sources',
         'get_mpc_config',
+        'estimate_report_deposit',
       ],
       changeMethods: [
         'publish_external',
-        'sync_publish_config_to_remote'
+        'sync_publish_config_to_remote',
+        'report',
       ],
       useLocalViewExecution: false,
     });

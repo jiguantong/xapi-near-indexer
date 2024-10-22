@@ -150,14 +150,22 @@ export class XAPIExporterStarter {
 
     // @ts-ignore
     const datasources = await ag.get_data_sources();
-    console.log("==================>", datasources);
     const answers = await this.fetchApi(datasources, waites[0]);
     const report: Report = {
       request_id: waites[0].requestId,
-      reward_address: '0x884b578c8a7e05c10b48fa247fbb0b16d668f2dd',
+      reward_address: "0x884b578c8a7e05c10b48fa247fbb0b16d668f2dd",
       answers,
     };
-    console.log(answers);
+    // @ts-ignore
+    const estimatedReportDeposit = await ag.estimate_report_deposit(report);
+    // @ts-ignore
+    const reported = await ag.report({
+      signerAccount: near.nearAccount(),
+      args: report,
+      gas: "300000000000000",
+      amount: estimatedReportDeposit,
+    });
+    console.log(reported);
 
     // const reporterRequired: Record<string, any> = {};
     // for (const todo of possibleTodos) {
@@ -241,7 +249,7 @@ export class XAPIExporterStarter {
           error: Tools.ellipsisText({
             text: e.message ?? e.msg ?? "ERROR_CALL_API",
             len: 480,
-            suffix: '...',
+            suffix: "...",
           }),
         });
       }

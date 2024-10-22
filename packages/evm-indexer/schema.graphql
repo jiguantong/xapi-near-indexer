@@ -5,6 +5,7 @@ type AggregatorConfigSet @entity(immutable: true) {
   publishFee: BigInt! # uint256
   aggregator: String! # string
   rewardAddress: String! # address
+  version: BigInt! # uint256
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: String!

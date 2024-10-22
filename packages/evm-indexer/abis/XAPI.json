@@ -46,6 +46,12 @@
         "internalType": "address",
         "name": "rewardAddress",
         "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "version",
+        "type": "uint256"
       }
     ],
     "name": "AggregatorConfigSet",
@@ -225,6 +231,7 @@
       { "internalType": "address", "name": "rewardAddress", "type": "address" },
       { "internalType": "uint256", "name": "reportersFee", "type": "uint256" },
       { "internalType": "uint256", "name": "publishFee", "type": "uint256" },
+      { "internalType": "uint256", "name": "version", "type": "uint256" },
       { "internalType": "bool", "name": "suspended", "type": "bool" }
     ],
     "stateMutability": "view",
@@ -355,7 +362,8 @@
       { "internalType": "string", "name": "aggregator", "type": "string" },
       { "internalType": "uint256", "name": "reportersFee", "type": "uint256" },
       { "internalType": "uint256", "name": "publishFee", "type": "uint256" },
-      { "internalType": "address", "name": "rewardAddress", "type": "address" }
+      { "internalType": "address", "name": "rewardAddress", "type": "address" },
+      { "internalType": "uint256", "name": "version", "type": "uint256" }
     ],
     "name": "setAggregatorConfig",
     "outputs": [],
