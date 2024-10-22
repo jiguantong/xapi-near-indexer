@@ -80,7 +80,7 @@ export class NearW {
   public async init(options: NearInitOptions): Promise<NearI> {
     const config = await this.nearConfig(options);
     const nearConnection = await nearAPI.connect(config);
-    return new NearI(nearConnection);
+    return new NearI(nearConnection, options.account.accountId);
   }
 }
 
@@ -88,7 +88,14 @@ export class NearI {
   private walletConnection: nearAPI.WalletConnection | undefined;
   private contractMap: Record<string, nearAPI.Contract> = {};
 
-  constructor(private readonly _near: nearAPI.Near) {}
+  constructor(
+    private readonly _near: nearAPI.Near,
+    private readonly _accountId: string,
+  ) {}
+
+  get accountId(): string {
+    return this._accountId;
+  }
 
   get near(): nearAPI.Near {
     return this._near;
@@ -120,6 +127,7 @@ export class NearI {
         'get_response',
         'get_reporter_required',
         'get_staking_contract',
+        'get_data_sources',
       ],
       changeMethods: [],
       useLocalViewExecution: false,

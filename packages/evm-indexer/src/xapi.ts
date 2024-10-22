@@ -65,33 +65,28 @@ export function handleFulfilled(event: FulfilledEvent): void {
   entity.requestId = event.params.requestId
   entity.response_reporters = reporters
   entity.response_result = event.params.response.result.toHexString().toLowerCase()
+  entity.response_errorCode = event.params.response.errorCode
   entity.status = event.params.status
 
   entity.blockNumber = event.block.number
   entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash.toHexString().toLowerCase()
+  entity.transactionHash = event.transaction.hash
 
   entity.save()
-
-  const rm = RequestMade.load(entity.requestId.toString());
-  if (rm) {
-    rm.fulfilled = 1;
-    rm.save();
-  }
 }
 
 export function handleOwnershipTransferStarted(
   event: OwnershipTransferStartedEvent
 ): void {
   let entity = new OwnershipTransferStarted(
-    event.transaction.hash.concatI32(event.logIndex.toI32()).toHexString().toLowerCase()
+    event.transaction.hash.concatI32(event.logIndex.toI32())
   )
-  entity.previousOwner = event.params.previousOwner.toHexString().toLowerCase()
-  entity.newOwner = event.params.newOwner.toHexString().toLowerCase()
+  entity.previousOwner = event.params.previousOwner
+  entity.newOwner = event.params.newOwner
 
   entity.blockNumber = event.block.number
   entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash.toHexString().toLowerCase()
+  entity.transactionHash = event.transaction.hash
 
   entity.save()
 }
@@ -100,47 +95,47 @@ export function handleOwnershipTransferred(
   event: OwnershipTransferredEvent
 ): void {
   let entity = new OwnershipTransferred(
-    event.transaction.hash.concatI32(event.logIndex.toI32()).toHexString().toLowerCase()
+    event.transaction.hash.concatI32(event.logIndex.toI32())
   )
-  entity.previousOwner = event.params.previousOwner.toHexString().toLowerCase()
-  entity.newOwner = event.params.newOwner.toHexString().toLowerCase()
+  entity.previousOwner = event.params.previousOwner
+  entity.newOwner = event.params.newOwner
 
   entity.blockNumber = event.block.number
   entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash.toHexString().toLowerCase()
+  entity.transactionHash = event.transaction.hash
 
   entity.save()
 }
 
 export function handleRequestMade(event: RequestMadeEvent): void {
   let entity = new RequestMade(
-    event.params.requestId.toString()
+    event.transaction.hash.concatI32(event.logIndex.toI32())
   )
   entity.requestId = event.params.requestId
   entity.aggregator = event.params.aggregator
   entity.requestData = event.params.requestData
-  entity.requester = event.params.requester.toHexString().toLowerCase()
+  entity.requester = event.params.requester
+  entity.exAggregator = event.params.exAggregator
+  entity.reportersFee = event.params.reportersFee
+  entity.publishFee = event.params.publishFee
 
   entity.blockNumber = event.block.number
   entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash.toHexString().toLowerCase()
-
-  entity.fulfilled = 0;
-  entity.xapiAddress = event.address.toHexString().toLowerCase();
+  entity.transactionHash = event.transaction.hash
 
   entity.save()
 }
 
 export function handleRewardsWithdrawn(event: RewardsWithdrawnEvent): void {
   let entity = new RewardsWithdrawn(
-    event.transaction.hash.concatI32(event.logIndex.toI32()).toHexString().toLowerCase()
+    event.transaction.hash.concatI32(event.logIndex.toI32())
   )
-  entity.withdrawer = event.params.withdrawer.toHexString().toLowerCase()
+  entity.withdrawer = event.params.withdrawer
   entity.amount = event.params.amount
 
   entity.blockNumber = event.block.number
   entity.blockTimestamp = event.block.timestamp
-  entity.transactionHash = event.transaction.hash.toHexString().toLowerCase()
+  entity.transactionHash = event.transaction.hash
 
   entity.save()
 }

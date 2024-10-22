@@ -4,6 +4,17 @@ import { EvmGraphqlService, NearGraphqlService } from "../services/graphql";
 import * as nearAPI from "near-api-js";
 
 import {
+  Datasource,
+  AuthValuePathString,
+  RequestMade,
+  Report,
+  Answer,
+  Tools,
+} from "@ringdao/xapi-common";
+
+import axios from "axios";
+
+import {
   logger,
   XAPIConfig,
   NearI,
@@ -49,7 +60,7 @@ export class XAPIExporterStarter {
       account: {
         privateKey:
           "secp256k1:by8kdJoJHu7uUkKfoaLd2J2Dp1q1TigeWMG123pHdu9UREqPcshCM223kWadm",
-        accountId: "example-account",
+        accountId: "guantong.testnet",
       },
     });
     this._nearInstance[networkId] = near;
@@ -108,7 +119,7 @@ export class XAPIExporterStarter {
     });
     const aggregatedEvents =
       await this.nearGraphqlService.queryAggregatedeEvents({
-        endpoint: XAPIConfig.graphql.endpoint('near'),
+        endpoint: XAPIConfig.graphql.endpoint("near"),
         ids: waites.map((item) => item.requestId),
       });
 
@@ -117,16 +128,36 @@ export class XAPIExporterStarter {
         !aggregatedEvents.find((agg) => agg.request_id === wait.requestId),
     );
 
-    const ag = near.contractAggregator('ormpaggregator.guantong.testnet');
+    const ag = near.contractAggregator("ormpaggregator.guantong.testnet");
     // @ts-ignore
     const reporterRequired: ReporterRequired = await ag.get_reporter_required();
-    console.log("------>", reporterRequired);
 
-    const sc = await this._stakingContract(lifecycle, 'ormpaggregator.guantong.testnet');
+    const sc = await this._stakingContract(
+      lifecycle,
+      "ormpaggregator.guantong.testnet",
+    );
     // @ts-ignore
-    const topStaked: TopStaked = await sc.get_top_staked({top: reporterRequired.quorum});
-    console.log("------>", topStaked);
+    const topStakeds: TopStaked[] = await sc.get_top_staked({
+      top: reporterRequired.quorum,
+    });
+    const includeMyself = topStakeds.find(
+      (item) => item.account_id.toLowerCase() === near.accountId.toLowerCase(),
+    );
 
+    if (!includeMyself) {
+      return;
+    }
+
+    // @ts-ignore
+    const datasources = await ag.get_data_sources();
+    console.log("==================>", datasources);
+    const answers = await this.fetchApi(datasources, waites[0]);
+    const report: Report = {
+      request_id: waites[0].requestId,
+      reward_address: '0x884b578c8a7e05c10b48fa247fbb0b16d668f2dd',
+      answers,
+    };
+    console.log(answers);
 
     // const reporterRequired: Record<string, any> = {};
     // for (const todo of possibleTodos) {
@@ -151,6 +182,170 @@ export class XAPIExporterStarter {
     logger.debug(lifecycle.targetChain.code, {
       target: "reporter",
       breads: ["hello", "x"],
+    });
+  }
+
+  private async fetchApi(
+    datasources: Datasource[],
+    todo: RequestMade,
+  ): Promise<Answer[]> {
+    const answers: Answer[] = [];
+    for (const ds of datasources) {
+      try {
+        const headers: Record<string, any> = {
+          "x-app": "xapi-reporter",
+        };
+        const reqData = this._mergeData(ds.body_json, todo.requestData);
+        const params = {};
+        const authValue = this._readAuth(ds.auth.value_path);
+        if (authValue) {
+          const place_path = ds.auth.place_path;
+          if (place_path.indexOf("headers.") === 0) {
+            const headerName = place_path.replace("headers.", "");
+            headers[headerName] = authValue;
+          }
+          if (place_path.indexOf("body.") === 0) {
+            const fieldName = place_path.replace("body.", "");
+            this._setNestedProperty(reqData, fieldName, authValue);
+          }
+          if (place_path.indexOf("query.") === 0) {
+            const queryName = place_path.replace("query.", "");
+            this._setNestedProperty(params, queryName, authValue);
+          }
+        }
+        const axiosOptions: any = {
+          method: ds.method,
+          url: ds.url,
+          // data: ",",
+          headers,
+        };
+        if (ds.method.toLowerCase() === "get") {
+          axiosOptions.params = Object.assign({}, reqData, params);
+        } else {
+          axiosOptions.params = params;
+          axiosOptions.data = reqData;
+        }
+        const response = await axios(axiosOptions);
+        console.log(response);
+        answers.push({
+          data_source_name: ds.name,
+          result: response.data,
+        });
+      } catch (e: any) {
+        logger.warn(
+          `failed call api, will report error: ${e.message || e.msg || e}`,
+          { target: "reporter" },
+        );
+        answers.push({
+          data_source_name: ds.name,
+          error: Tools.ellipsisText({
+            text: e.message ?? e.msg ?? "ERROR_CALL_API",
+            len: 480,
+            suffix: '...',
+          }),
+        });
+      }
+    }
+    return answers;
+  }
+
+  private _readAuth(valuePath: AuthValuePathString): string | undefined {
+    if (!valuePath) return undefined;
+    if (valuePath.indexOf("env.") === 0) {
+      const envKey = valuePath.replace("env.", "");
+      return process.env[envKey.toUpperCase()];
+    }
+    return undefined;
+  }
+
+  private _mergeData(first: string, second: string): any | undefined {
+    let fv = first,
+      sv = second;
+    if (typeof fv === "string") {
+      try {
+        fv = JSON.parse(fv);
+      } catch (ignore: any) {
+        logger.warn(
+          `failed to parse data from datasource: ${ignore} will use raw value`,
+          { target: "reporter" },
+        );
+      }
+    }
+    try {
+      sv = JSON.parse(sv);
+    } catch (ignore: any) {
+      logger.warn(
+        `failed to parse data from request made: ${ignore} will use raw value`,
+        { target: "reporter" },
+      );
+    }
+    const tfv = typeof fv;
+    const tsv = typeof sv;
+    if (tfv !== tsv) {
+      throw new Error(
+        `two data have different types: ${tfv} != ${tsv}. ${JSON.stringify(
+          fv,
+        )} |||| ${JSON.stringify(sv)}`,
+      );
+    }
+    // object
+    if (tfv === "object") {
+      if (Array.isArray(fv) && Array.isArray(sv)) {
+        return [...fv, ...sv];
+      }
+      if (!Array.isArray(fv) && Array.isArray(sv)) {
+        return [...sv].push(fv);
+      }
+      if (Array.isArray(fv) && Array.isArray(sv)) {
+        throw new Error(
+          `can not merge array to object ${JSON.stringify(
+            fv,
+          )} |||| ${JSON.stringify(sv)}`,
+        );
+      }
+      if (!Array.isArray(fv) && !Array.isArray(sv)) {
+        return Object.assign({}, fv, sv);
+      }
+      throw new Error("unreachable");
+    }
+    // number
+    // bigint
+    // string
+    //# return second value directly, if there have another strategy please update this.
+    return sv;
+  }
+
+  private _setNestedProperty(obj: any, path: string, value: any) {
+    const keys = path.split(".");
+    let current = obj;
+
+    keys.forEach((key, index) => {
+      const arrayMatch = key.match(/^([a-zA-Z0-9_]+)\[(\d+)\]$/);
+
+      if (arrayMatch) {
+        const arrayKey = arrayMatch[1];
+        const arrayIndex = parseInt(arrayMatch[2], 10);
+
+        if (!current[arrayKey]) {
+          current[arrayKey] = [];
+        }
+
+        if (!current[arrayKey][arrayIndex]) {
+          current[arrayKey][arrayIndex] =
+            keys.length === index + 1 ? value : {};
+        }
+
+        current = current[arrayKey][arrayIndex];
+      } else {
+        if (index === keys.length - 1) {
+          current[key] = value;
+        } else {
+          if (!current[key]) {
+            current[key] = {};
+          }
+          current = current[key];
+        }
+      }
     });
   }
 }

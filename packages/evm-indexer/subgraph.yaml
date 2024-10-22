@@ -8,7 +8,7 @@ dataSources:
     name: XAPI
     network: sepolia
     source:
-      address: "0x6984ebE378F8cb815546Cb68a98807C1fA121A81"
+      address: "0x844EB21C712914cC25Fa0Df8330f02b58495B250"
       abi: XAPI
       startBlock: 6849034
     mapping:
