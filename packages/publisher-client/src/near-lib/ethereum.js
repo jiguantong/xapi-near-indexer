@@ -34,7 +34,7 @@ export class NearEthereum {
   }
 
   async getNonce(accountId) {
-    return await this.web3.eth.getTransactionCount(accountId, "PENDING");
+    return await this.web3.eth.getTransactionCount(accountId, "pending");
   }
 
   async getContractViewFunction(receiver, abi, methodName, args = []) {
@@ -112,5 +112,18 @@ export class NearEthereum {
     const serializedTx = bytesToHex(signedTransaction.serialize());
     const relayed = await this.web3.eth.sendSignedTransaction(serializedTx);
     return relayed.transactionHash
+  }
+
+  async estimateGas(receiver, abi, methodName, args = [], from) {
+    const contract = new Contract(receiver, abi, this.provider);
+    return await contract[methodName].estimateGas(...args, { from });
+  }
+
+  stringToBytes(str) {
+    const bytes = [];
+    for (let i = 0; i < str.length; i++) {
+      bytes.push(str.charCodeAt(i));
+    }
+    return '0x' + bytes.map(byte => ('0' + byte.toString(16)).slice(-2)).join('');
   }
 }

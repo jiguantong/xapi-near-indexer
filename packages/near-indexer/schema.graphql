@@ -9,6 +9,7 @@ type Response @entity {
   result: String!
   chain_id: BigInt!
   aggregator: String!
+  error_code: Int!
 }
 
 type PublishChainConfig @entity {
@@ -61,6 +62,7 @@ type AggregatedEvent @entity {
   result: String!
   chain_id: BigInt!
   aggregator: String!
+  error_code: Int!
 }
 
 type SetPublishChainConfigEvent @entity {
@@ -84,4 +86,9 @@ type SyncPublishChainConfigEvent @entity {
   signature: Signature!
   mpc_options: MpcOptions!
   aggregator: String!
+}
+
+type Aggregator @entity {
+  id: ID!
+  supported_chains: [String!]!
 }

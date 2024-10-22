@@ -1,5 +1,5 @@
 import { BigInt, log, near, json, TypedMap, JSONValue, JSONValueKind } from '@graphprotocol/graph-ts';
-import { Response, PublishChainConfig, PublishEvent, Signature, AggregatedEvent, SetPublishChainConfigEvent, MpcOptions, SyncPublishChainConfigEvent } from '../generated/schema';
+import { Response, PublishChainConfig, PublishEvent, Signature, AggregatedEvent, SetPublishChainConfigEvent, MpcOptions, SyncPublishChainConfigEvent, Aggregator } from '../generated/schema';
 
 export function handleReceipt(receipt: near.ReceiptWithOutcome): void {
   const actions = receipt.receipt.actions;
@@ -116,9 +116,29 @@ function handleSetPublishChainConfig(logs: string[], blockHeader: near.BlockHead
   if (setPublishChainConfigEvent == null) {
     setPublishChainConfigEvent = parseSetPublishChainConfig(_eventData, receipt);
     setPublishChainConfigEvent.save();
+    syncAllAggregators(setPublishChainConfigEvent);
   } else {
     log.debug("SetPublishChainConfigEvent event already exists: {}", [nanoId]);
   }
+}
+
+function syncAllAggregators(setPublishChainConfigEvent: SetPublishChainConfigEvent): void {
+  const _aggregator = setPublishChainConfigEvent.aggregator;
+  let _loadAggregator = Aggregator.load(_aggregator);
+  if (!_loadAggregator) {
+    log.debug("### New Aggregator: {}", [_aggregator]);
+    _loadAggregator = new Aggregator(_aggregator);
+    _loadAggregator.supported_chains = [setPublishChainConfigEvent.chain_id.toString()];
+  } else {
+    const _oldChains = _loadAggregator.supported_chains;
+    const _newChain = setPublishChainConfigEvent.chain_id.toString();
+    log.debug("### Aggregator support new chain: {}, old chains: {}", [_newChain, _oldChains.toString()]);
+    if (!_oldChains.includes(_newChain)) {
+      _oldChains.push(_newChain);
+    }
+    _loadAggregator.supported_chains = _oldChains;
+  }
+  _loadAggregator.save();
 }
 
 function handleSyncPublishChainConfig(logs: string[], blockHeader: near.BlockHeader, receipt: near.ActionReceipt): void {
@@ -203,6 +223,7 @@ function parseResponse(eventData: TypedMap<string, JSONValue>, nanoId: string, r
   response.result = eventData.mustGet("result").toString();
   response.chain_id = BigInt.fromString(eventData.mustGet("chain_id").toString());
   response.aggregator = receipt.receiverId;
+  response.error_code = eventData.get("error_code") ? eventData.mustGet("error_code").toI64() as i32 : 0;
   return response;
 }
 
@@ -218,6 +239,7 @@ function parseAggregated(eventData: TypedMap<string, JSONValue>, nanoId: string,
   aggregatedEvent.result = eventData.mustGet("result").toString();
   aggregatedEvent.chain_id = BigInt.fromString(eventData.mustGet("chain_id").toString());
   aggregatedEvent.aggregator = receipt.receiverId;
+  aggregatedEvent.error_code = eventData.get("error_code") ? eventData.mustGet("error_code").toI64() as i32 : 0;
   return aggregatedEvent;
 }
 
