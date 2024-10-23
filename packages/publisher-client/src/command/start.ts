@@ -246,10 +246,10 @@ export class PublisherStarter {
         });
         // call Aggregator publish_external()
         // @ts-ignore
-        const mpcConfig = await lifecycle.near.contractAggregator(aggregated.aggregator!).get_mpc_config();
-        logger.info(`===> mpcConfig: ${JSON.stringify(mpcConfig)}`, {
-            target: "triggerPublish",
-        });
+        // const mpcConfig = await lifecycle.near.contractAggregator(aggregated.aggregator!).get_mpc_config();
+        // logger.info(`===> mpcConfig: ${JSON.stringify(mpcConfig)}`, {
+        //     target: "triggerPublish",
+        // });
 
         let result;
         try {
@@ -262,12 +262,12 @@ export class PublisherStarter {
                         mpc_options: { nonce: nonce.toString(), gas_limit: gasLimit.toString(), max_fee_per_gas: maxFeePerGas.toString(), max_priority_fee_per_gas: maxPriorityFeePerGas.toString() }
                     },
                     gas: "300000000000000",
-                    amount: this.bigIntMin([MAX_MPC_DEPOSIT, BigInt(mpcConfig.attached_balance)]).toString()
+                    amount: 0
                 }
             );
         } catch (e) {
             console.log("publish error", e);
-            logger.error(`===> publish_external error, try get result from indexer, aggregator: ${lifecycle.aggregator}, request_id: ${relatedRequest.requestId}`, {
+            logger.error(`===> publish_external error, try get result from indexer`, {
                 target: "triggerPublish",
             });
             await setTimeout(5000);
@@ -343,10 +343,10 @@ export class PublisherStarter {
         });
         // call Aggregator sync_publish_config_to_remote()
         // @ts-ignore
-        const mpcConfig = await lifecycle.near.contractAggregator(publishChainConfig.aggregator!).get_mpc_config();
-        logger.info(`===> mpcConfig: ${JSON.stringify(mpcConfig)}`, {
-            target: "triggerSyncConfig",
-        });
+        // const mpcConfig = await lifecycle.near.contractAggregator(publishChainConfig.aggregator!).get_mpc_config();
+        // logger.info(`===> mpcConfig: ${JSON.stringify(mpcConfig)}`, {
+        //     target: "triggerSyncConfig",
+        // });
       
         let result;
         try {
@@ -359,7 +359,7 @@ export class PublisherStarter {
                         mpc_options: { nonce: nonce.toString(), gas_limit: gasLimit.toString(), max_fee_per_gas: maxFeePerGas.toString(), max_priority_fee_per_gas: maxPriorityFeePerGas.toString() }
                     },
                     gas: "300000000000000",
-                    amount: this.bigIntMin([MAX_MPC_DEPOSIT, BigInt(mpcConfig.attached_balance)]).toString()
+                    amount: 0
                 }
             );
         } catch (e) {
