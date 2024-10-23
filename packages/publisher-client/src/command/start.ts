@@ -347,7 +347,7 @@ export class PublisherStarter {
         logger.info(`===> mpcConfig: ${JSON.stringify(mpcConfig)}`, {
             target: "triggerSyncConfig",
         });
-
+      
         let result;
         try {
             // @ts-ignore

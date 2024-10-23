@@ -28,6 +28,7 @@ export function handleAggregatorConfigSet(
   entity.publishFee = event.params.publishFee
   entity.aggregator = event.params.aggregator
   entity.rewardAddress = event.params.rewardAddress.toHexString().toLowerCase()
+  entity.version = event.params.version
 
   entity.blockNumber = event.block.number
   entity.blockTimestamp = event.block.timestamp
@@ -65,6 +66,7 @@ export function handleFulfilled(event: FulfilledEvent): void {
   entity.requestId = event.params.requestId
   entity.response_reporters = reporters
   entity.response_result = event.params.response.result.toHexString().toLowerCase()
+  entity.response_errorCode = event.params.response.errorCode
   entity.status = event.params.status
 
   entity.blockNumber = event.block.number
@@ -120,6 +122,9 @@ export function handleRequestMade(event: RequestMadeEvent): void {
   entity.aggregator = event.params.aggregator
   entity.requestData = event.params.requestData
   entity.requester = event.params.requester.toHexString().toLowerCase()
+  entity.exAggregator = event.params.exAggregator.toHexString().toLowerCase()
+  entity.reportersFee = event.params.reportersFee
+  entity.publishFee = event.params.publishFee
 
   entity.blockNumber = event.block.number
   entity.blockTimestamp = event.block.timestamp

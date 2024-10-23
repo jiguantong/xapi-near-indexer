@@ -35,6 +35,22 @@ export interface TopStaked {
   amount: string
 }
 
+export type ResultPathString = `headers.${string}` | `body.${string}`;
+export type AuthPlacePathString = `headers.${string}` | `body.${string}` | `query.${string}`;
+export type AuthValuePathString = `env.${string}`;
+export interface Datasource {
+  method: string
+  name: string
+  result_path: ResultPathString
+  url: string
+  auth: DatasourceAuth
+  body_json: string
+}
+
+export interface DatasourceAuth {
+  place_path: AuthPlacePathString
+  value_path: AuthValuePathString
+}
 
 
 export interface Signature {
@@ -88,8 +104,21 @@ export interface MpcOptions {
   max_priority_fee_per_gas: string
 }
 
+export interface Report {
+  request_id: string
+  reporter?: string
+  timestamp?: string
+  reward_address: string
+  answers: Answer[]
+}
+
+export interface Answer {
+  data_source_name: string
+  result?: string
+  error?: string
+}
+
 export interface Aggregator {
   id: string
   supported_chains: string[]
 }
-

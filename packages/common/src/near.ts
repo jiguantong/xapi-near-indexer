@@ -5,6 +5,7 @@ import {
 } from "near-api-js/lib/providers";
 import { ContractMethods } from "near-api-js/lib/contract";
 import { KeyPairString } from "near-api-js/lib/utils";
+import { Account as NearAccount } from 'near-api-js';
 
 export interface NearContractOptions {
   contractId: string;
@@ -80,7 +81,7 @@ export class NearW {
   public async init(options: NearInitOptions): Promise<NearI> {
     const config = await this.nearConfig(options);
     const nearConnection = await nearAPI.connect(config);
-    return new NearI(nearConnection);
+    return new NearI(nearConnection, options.account.accountId);
   }
 }
 
@@ -88,7 +89,14 @@ export class NearI {
   private walletConnection: nearAPI.WalletConnection | undefined;
   private contractMap: Record<string, nearAPI.Contract> = {};
 
-  constructor(private readonly _near: nearAPI.Near) {}
+  constructor(
+    private readonly _near: nearAPI.Near,
+    private readonly _accountId: string,
+  ) {}
+
+  get accountId(): string {
+    return this._accountId;
+  }
 
   get near(): nearAPI.Near {
     return this._near;
@@ -98,6 +106,10 @@ export class NearI {
     if (this.walletConnection) return this.walletConnection;
     this.walletConnection = new nearAPI.WalletConnection(this._near, "xapi");
     return this.walletConnection;
+  }
+
+  public nearAccount(): NearAccount {
+    return new NearAccount(this.near.connection, this.accountId);
   }
 
   public contract(contractId: string, options: ContractMethods): nearAPI.Contract {
@@ -120,11 +132,15 @@ export class NearI {
         'get_response',
         'get_reporter_required',
         'get_staking_contract',
+        'get_data_sources',
         'get_mpc_config',
+        'estimate_storage_deposit',
       ],
       changeMethods: [
         'publish_external',
-        'sync_publish_config_to_remote'
+        'sync_publish_config_to_remote',
+        'report',
+
       ],
       useLocalViewExecution: false,
     });
