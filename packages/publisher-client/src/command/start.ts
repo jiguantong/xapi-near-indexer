@@ -19,6 +19,9 @@ import xapiAbi from "../abis/xapi.abi.json";
 import { assert } from 'console';
 import { Account as NearAccount } from 'near-api-js';
 import { KeyPairString } from "near-api-js/lib/utils";
+import { PublisherStorage } from '../services/storage';
+
+const homedir = require('os').homedir();
 
 export interface StartOptions {
     nearAccount: string,
@@ -31,9 +34,8 @@ export interface PublisherLifecycle extends StartOptions {
     targetChain: HelixChainConf;
     nearEthereum: NearEthereum;
     aggregator: string;
+    cache: PublisherStorage;
 }
-
-const MAX_MPC_DEPOSIT = 1000000000000000000000000n;
 
 @Service()
 export class PublisherStarter {
@@ -69,6 +71,7 @@ export class PublisherStarter {
     private nearEthereumMap: Record<string, NearEthereum> = {};
 
     async start(options: StartOptions) {
+        const publisherCache = new PublisherStorage(`${homedir}/.xapi-publisher/`);
         while (true) {
             let allAggregators: Aggregator[] = [];
             try {
@@ -105,7 +108,7 @@ export class PublisherStarter {
                         logger.info(`==== start config-syncer for ${aggregator.id} [${chain.name}-${chain.id.toString()}] ====`, {
                             target: "config-syncer",
                         });
-                        await this.runConfigSyncer({ ...options, near, targetChain: chain, nearEthereum, aggregator: aggregator.id });
+                        await this.runConfigSyncer({ ...options, near, targetChain: chain, nearEthereum, aggregator: aggregator.id, cache: publisherCache });
                         await setTimeout(1000);
                     } catch (e: any) {
                         logger.error(`run config-syncer errored: ${e.stack || e}`, {
@@ -118,7 +121,7 @@ export class PublisherStarter {
                         logger.info(`==== start publisher for ${aggregator.id} [${chain.name}-${chain.id.toString()}] ====`, {
                             target: "publisher",
                         });
-                        await this.runPublisher({ ...options, near, targetChain: chain, nearEthereum, aggregator: aggregator.id });
+                        await this.runPublisher({ ...options, near, targetChain: chain, nearEthereum, aggregator: aggregator.id, cache: publisherCache });
                         await setTimeout(1000);
                     } catch (e: any) {
                         logger.error(`run publisher errored: ${e.stack || e}`, {
@@ -146,19 +149,28 @@ export class PublisherStarter {
                 ids: nonfulfilled.map((item) => item.requestId),
             });
         const toPublishIds = aggregatedEvents.map(a => a.request_id);
-        logger.info(`==> Handle ${lifecycle.aggregator} [${targetChain.name}-${targetChain.id.toString()}] toPublishIds: [${toPublishIds.length}], ${toPublishIds}`, {
+        logger.info(`==> ${lifecycle.aggregator} [${targetChain.name}-${targetChain.id.toString()}] toPublishIds: [${toPublishIds.length}], ${toPublishIds}`, {
             target: "publisher",
         });
         // 3. Check request status on xapi contract
         for (const aggregated of aggregatedEvents) {
             const relatedRequest = nonfulfilled.find(v => v.requestId == aggregated.request_id);
+
+            const checkCache = await lifecycle.cache.get(this.publishCacheKey(lifecycle.aggregator, relatedRequest!.requestId));
+            if (checkCache) {
+                logger.warn(`==> ${lifecycle.aggregator} [${targetChain.name}-${targetChain.id.toString()}] skip cached request: ${relatedRequest!.requestId}, ${checkCache}`, {
+                    target: "publisher",
+                });
+                continue;
+            }
+
             const _request = await lifecycle.nearEthereum.getContractViewFunction(relatedRequest!.xapiAddress, xapiAbi, "requests", [relatedRequest!.requestId]);
-            logger.info(`==> [${targetChain.name}-${targetChain.id.toString()}] double check ${relatedRequest?.requestId}, status: ${_request.status}`, {
+            logger.info(`==> ${lifecycle.aggregator} [${targetChain.name}-${targetChain.id.toString()}] double check ${relatedRequest?.requestId}, status: ${_request.status}`, {
                 target: "publisher",
             });
             if (_request.status == 0) {
                 // 4. if status is pending, triggerPublish
-                logger.info(`==> [${relatedRequest?.requestId}] triggerPublish`, {
+                logger.info(`==> ${lifecycle.aggregator} [${relatedRequest?.requestId}] triggerPublish`, {
                     target: "publisher"
                 })
                 await this.triggerPublish(aggregated, relatedRequest!, lifecycle);
@@ -205,6 +217,15 @@ export class PublisherStarter {
         logger.info(`==> [${targetChain.name}-${targetChain.id.toString()}] ${lifecycle.aggregator}, near: ${latestConfigFromNear.version} > evm: ${latestConfigFromEvm?.version}`, {
             target: "config-syncer",
         });
+
+        const checkCache = await lifecycle.cache.get(this.syncConfigCacheKey(lifecycle.aggregator, lifecycle.targetChain.id, latestConfigFromNear.version));
+        if (checkCache) {
+            logger.warn(`==> ${lifecycle.aggregator} [${targetChain.name}-${targetChain.id.toString()}] skip cached config version: ${latestConfigFromNear.version}, ${checkCache}`, {
+                target: "config-syncer",
+            });
+            return;
+        }
+
         // Then, need to trigger sync
         await this.triggerSyncConfig(latestConfigFromNear, lifecycle);
         await setTimeout(3000);
@@ -266,19 +287,24 @@ export class PublisherStarter {
                 }
             );
         } catch (e) {
-            console.log("publish error", e);
-            logger.error(`===> publish_external error, try get result from indexer`, {
+            // @ts-ignore
+            logger.error(`===> publish_external error, try get result from indexer: ${e.message}`, {
                 target: "triggerPublish",
             });
-            await setTimeout(5000);
-            result =
-                await this.nearGraphqlService.queryPublishSignature({
-                    endpoint: XAPIConfig.graphql.endpoint('near'),
-                    requestId: relatedRequest.requestId,
-                    aggregator: lifecycle.aggregator
-                });
+            // @ts-ignore
+            if (e.message.includes("Exceeded the prepaid gas")) {
+                await lifecycle.cache.put(this.publishCacheKey(lifecycle.aggregator, relatedRequest.requestId), `Exceeded the prepaid gas.`);
+            } else {
+                await setTimeout(5000);
+                result =
+                    await this.nearGraphqlService.queryPublishSignature({
+                        endpoint: XAPIConfig.graphql.endpoint('near'),
+                        requestId: relatedRequest.requestId,
+                        aggregator: lifecycle.aggregator
+                    });
+            }
         }
-        console.log("publish_external result", result);
+        // console.log("publish_external result", result);
         if (result && result.signature) {
             let _signature = result.signature;
             if (typeof _signature == 'string') {
@@ -306,6 +332,10 @@ export class PublisherStarter {
                 target: "triggerPublish",
             });
         }
+    }
+
+    publishCacheKey(aggregator: string, requestId: string): string {
+        return `publish-${aggregator}-${requestId}`
     }
 
     async triggerSyncConfig(publishChainConfig: PublishChainConfig, lifecycle: PublisherLifecycle) {
@@ -347,7 +377,7 @@ export class PublisherStarter {
         // logger.info(`===> mpcConfig: ${JSON.stringify(mpcConfig)}`, {
         //     target: "triggerSyncConfig",
         // });
-      
+
         let result;
         try {
             // @ts-ignore
@@ -363,20 +393,25 @@ export class PublisherStarter {
                 }
             );
         } catch (e) {
-            console.log("sync config error", e);
-            logger.error(`===> sync_publish_config_to_remote error, try get result from indexer`, {
+            // @ts-ignore
+            logger.error(`===> sync_publish_config_to_remote error, try get result from indexer: ${e.message}`, {
                 target: "triggerSyncConfig",
             });
-            await setTimeout(5000);
-            result =
-                await this.nearGraphqlService.querySyncConfigSignature({
-                    endpoint: XAPIConfig.graphql.endpoint('near'),
-                    chainId: lifecycle.targetChain.id.toString(),
-                    version: publishChainConfig.version,
-                    aggregator: lifecycle.aggregator
-                });
+            // @ts-ignore
+            if (e.message.includes("Exceeded the prepaid gas")) {
+                await lifecycle.cache.put(this.syncConfigCacheKey(lifecycle.aggregator, lifecycle.targetChain.id, publishChainConfig.version), `Exceeded the prepaid gas.`);
+            } else {
+                await setTimeout(5000);
+                result =
+                    await this.nearGraphqlService.querySyncConfigSignature({
+                        endpoint: XAPIConfig.graphql.endpoint('near'),
+                        chainId: lifecycle.targetChain.id.toString(),
+                        version: publishChainConfig.version,
+                        aggregator: lifecycle.aggregator
+                    });
+            }
         }
-        console.log("sync_publish_config_to_remote result", result);
+        // console.log("sync_publish_config_to_remote result", result);
         if (result && result.signature) {
             let _signature = result.signature;
             if (typeof _signature == 'string') {
@@ -404,6 +439,10 @@ export class PublisherStarter {
                 target: "triggerSyncConfig",
             });
         }
+    }
+
+    syncConfigCacheKey(aggregator: string, chainId: bigint, version: string): string {
+        return `syncconfig-${aggregator}-${chainId}-${version}`;
     }
 
     async relayMpcTx(chainId: string, contract: Address, calldata: string, signature: Signature, mpcOptions: MpcOptions, lifecycle: PublisherLifecycle) {
