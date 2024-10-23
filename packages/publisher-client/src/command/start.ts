@@ -11,6 +11,7 @@ import {
     NearI,
     NearW,
     MpcOptions, XAPIResponse, Signature, PublishChainConfig, RequestMade,
+    Aggregator,
 } from "@ringdao/xapi-common";
 import { HelixChain, HelixChainConf } from "@helixbridge/helixconf";
 
@@ -69,10 +70,17 @@ export class PublisherStarter {
 
     async start(options: StartOptions) {
         while (true) {
-            const allAggregators = await this.nearGraphqlService.queryAllAggregators({
-                endpoint: XAPIConfig.graphql.endpoint('near'),
-            });
-            console.log("allAggregators", allAggregators);
+            let allAggregators: Aggregator[] = [];
+            try {
+                allAggregators = await this.nearGraphqlService.queryAllAggregators({
+                    endpoint: XAPIConfig.graphql.endpoint('near'),
+                });
+            } catch (e) {
+                logger.error(`==== Fetch aggregators failed ====`, {
+                    target: "main",
+                });
+                console.log(e);
+            }
             if (!allAggregators || allAggregators.length == 0) {
                 logger.info(`==== No aggregators, wait 60 seconds to continue ====`, {
                     target: "main",
@@ -93,7 +101,8 @@ export class PublisherStarter {
                     const nearEthereum = this.getNearEthClient(chain);
 
                     try {
-                        logger.info(`==== start config-syncer for [${chain.name}-${chain.id.toString()}] ====`, {
+                        console.log("\n");
+                        logger.info(`==== start config-syncer for ${aggregator.id} [${chain.name}-${chain.id.toString()}] ====`, {
                             target: "config-syncer",
                         });
                         await this.runConfigSyncer({ ...options, near, targetChain: chain, nearEthereum, aggregator: aggregator.id });
@@ -105,7 +114,8 @@ export class PublisherStarter {
                     }
 
                     try {
-                        logger.info(`==== start publisher for [${chain.name}-${chain.id.toString()}] ====`, {
+                        console.log("\n");
+                        logger.info(`==== start publisher for ${aggregator.id} [${chain.name}-${chain.id.toString()}] ====`, {
                             target: "publisher",
                         });
                         await this.runPublisher({ ...options, near, targetChain: chain, nearEthereum, aggregator: aggregator.id });
@@ -117,7 +127,6 @@ export class PublisherStarter {
                     }
 
                     await setTimeout(1000);
-                    return;
                 }
             }
         }
@@ -137,7 +146,7 @@ export class PublisherStarter {
                 ids: nonfulfilled.map((item) => item.requestId),
             });
         const toPublishIds = aggregatedEvents.map(a => a.request_id);
-        logger.info(`### ==> Handle ${lifecycle.aggregator} [${targetChain.name}-${targetChain.id.toString()}] toPublishIds: [${toPublishIds.length}], ${toPublishIds}`, {
+        logger.info(`==> Handle ${lifecycle.aggregator} [${targetChain.name}-${targetChain.id.toString()}] toPublishIds: [${toPublishIds.length}], ${toPublishIds}`, {
             target: "publisher",
         });
         // 3. Check request status on xapi contract
@@ -226,7 +235,6 @@ export class PublisherStarter {
             target: "triggerPublish",
         });
         const balance = await lifecycle.nearEthereum.getBalance(deriveAddress);
-        // todo check if fee is enough
         logger.info(`===> balance: ${balance}`, {
             target: "triggerPublish",
         });
@@ -324,7 +332,6 @@ export class PublisherStarter {
             target: "triggerSyncConfig",
         });
         const balance = await lifecycle.nearEthereum.getBalance(deriveAddress);
-        // todo check if fee is enough
         logger.info(`===> balance: ${balance}`, {
             target: "triggerSyncConfig",
         });
