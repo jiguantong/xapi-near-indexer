@@ -1,4 +1,4 @@
-import Container, { Service } from 'typedi';
+import { Service } from 'typedi';
 import { setTimeout } from "timers/promises";
 import { EvmGraphqlService, NearGraphqlService } from "../services/graphql";
 import { FeeMarketEIP1559Transaction } from '@ethereumjs/tx';
@@ -16,10 +16,9 @@ import {
 import { HelixChain, HelixChainConf } from "@helixbridge/helixconf";
 
 import xapiAbi from "../abis/xapi.abi.json";
-import { assert } from 'console';
+import { PublisherStorage } from '../services/storage';
 import { Account as NearAccount } from 'near-api-js';
 import { KeyPairString } from "near-api-js/lib/utils";
-import { PublisherStorage } from '../services/storage';
 
 const homedir = require('os').homedir();
 
@@ -79,10 +78,10 @@ export class PublisherStarter {
                     endpoint: XAPIConfig.graphql.endpoint('near'),
                 });
             } catch (e) {
-                logger.error(`==== Fetch aggregators failed ====`, {
+                // @ts-ignore
+                logger.error(`==== Fetch aggregators failed: ${e.message}`, {
                     target: "main",
                 });
-                console.log(e);
             }
             if (!allAggregators || allAggregators.length == 0) {
                 logger.info(`==== No aggregators, wait 60 seconds to continue ====`, {
@@ -95,6 +94,7 @@ export class PublisherStarter {
                 for (const chainId of aggregator.supported_chains) {
                     const chain = HelixChain.get(chainId);
                     if (!chain) {
+                        logger.info("------------------------------------------------");
                         logger.error(`Can't find chain: ${chainId}`, {
                             target: "start"
                         });
@@ -104,8 +104,8 @@ export class PublisherStarter {
                     const nearEthereum = this.getNearEthClient(chain);
 
                     try {
-                        console.log("\n");
-                        logger.info(`==== start config-syncer for ${aggregator.id} [${chain.name}-${chain.id.toString()}] ====`, {
+                        logger.info("------------------------------------------------");
+                        logger.info(`==== 📞 start config-syncer for ${aggregator.id} [${chain.name}-${chain.id.toString()}] ====`, {
                             target: "config-syncer",
                         });
                         await this.runConfigSyncer({ ...options, near, targetChain: chain, nearEthereum, aggregator: aggregator.id, cache: publisherCache });
@@ -117,8 +117,8 @@ export class PublisherStarter {
                     }
 
                     try {
-                        console.log("\n");
-                        logger.info(`==== start publisher for ${aggregator.id} [${chain.name}-${chain.id.toString()}] ====`, {
+                        logger.info("------------------------------------------------");
+                        logger.info(`==== 📦 start publisher for ${aggregator.id} [${chain.name}-${chain.id.toString()}] ====`, {
                             target: "publisher",
                         });
                         await this.runPublisher({ ...options, near, targetChain: chain, nearEthereum, aggregator: aggregator.id, cache: publisherCache });
@@ -235,7 +235,7 @@ export class PublisherStarter {
         // Derive address
         const deriveAddress = await this.deriveXAPIAddress(aggregated.aggregator!, lifecycle);
         logger.info(`===> deriveAddress: ${deriveAddress}`, {
-            target: "triggerPublish",
+            target: "do-publish",
         });
         // console.log("estimate", relatedRequest.xapiAddress, relatedRequest.requestId, aggregated.valid_reporters, aggregated.result)
         let gasLimit = 500_000n;
@@ -245,31 +245,35 @@ export class PublisherStarter {
                 deriveAddress
             );
         } catch (e) {
-            console.log("triggerPublish, estimate gas error", e);
+            // @ts-ignore
+            logger.error(`===> estimate gasLimit error: ${JSON.stringify(e.cause)}, ${e.reason}, ${e.message}`, {
+                target: "do-publish",
+            });
+            // console.log("triggerPublish, estimate gas error", e);
         }
 
         logger.info(`===> gasLimit: ${gasLimit}`, {
-            target: "triggerPublish",
+            target: "do-publish",
         });
         const nonce = await lifecycle.nearEthereum.getNonce(deriveAddress);
         logger.info(`===> nonce: ${nonce}`, {
-            target: "triggerPublish",
+            target: "do-publish",
         });
         const balance = await lifecycle.nearEthereum.getBalance(deriveAddress);
         logger.info(`===> balance: ${balance}`, {
-            target: "triggerPublish",
+            target: "do-publish",
         });
         let { maxFeePerGas, maxPriorityFeePerGas } = await lifecycle.nearEthereum.queryGasPrice();
         maxFeePerGas = (BigInt(maxFeePerGas) * BigInt(3) / BigInt(2)).toString();
         maxPriorityFeePerGas = (BigInt(maxPriorityFeePerGas) * BigInt(3) / BigInt(2)).toString();
         logger.info(`===> maxFeePerGas: ${maxFeePerGas}, maxPriorityFeePerGas: ${maxPriorityFeePerGas}`, {
-            target: "triggerPublish",
+            target: "do-publish",
         });
         // call Aggregator publish_external()
         // @ts-ignore
         // const mpcConfig = await lifecycle.near.contractAggregator(aggregated.aggregator!).get_mpc_config();
         // logger.info(`===> mpcConfig: ${JSON.stringify(mpcConfig)}`, {
-        //     target: "triggerPublish",
+        //     target: "do-publish",
         // });
 
         let result;
@@ -289,7 +293,7 @@ export class PublisherStarter {
         } catch (e) {
             // @ts-ignore
             logger.error(`===> publish_external error, try get result from indexer: ${e.message}`, {
-                target: "triggerPublish",
+                target: "do-publish",
             });
             // @ts-ignore
             if (e.message.includes("Exceeded the prepaid gas")) {
@@ -321,15 +325,14 @@ export class PublisherStarter {
                     recovery_id: _signature.recovery_id
                 }, result.mpc_options, lifecycle);
             } catch (e) {
-                console.log(e);
                 // @ts-ignore
                 logger.error(`===> relayMpcTx error: ${JSON.stringify(e.cause)}, ${e.reason}`, {
-                    target: "triggerPublish",
+                    target: "do-publish",
                 });
             }
         } else {
             logger.error(`===> publish_external error: can't find result from indexer, aggregator: ${lifecycle.aggregator}, request_id: ${relatedRequest.requestId}`, {
-                target: "triggerPublish",
+                target: "do-publish",
             });
         }
     }
@@ -342,7 +345,7 @@ export class PublisherStarter {
         // Derive address
         const deriveAddress = await this.deriveXAPIAddress(publishChainConfig.aggregator!, lifecycle);
         logger.info(`===> deriveAddress: ${deriveAddress}`, {
-            target: "triggerSyncConfig",
+            target: "do-sync-config",
         });
         let gasLimit = 500_000n;
         try {
@@ -351,31 +354,34 @@ export class PublisherStarter {
                 deriveAddress
             );
         } catch (e) {
-            console.log("triggerSyncConfig, estimate gas error", e);
+            // @ts-ignore
+            logger.error(`===> estimate gasLimit error: ${JSON.stringify(e.cause)}, ${e.reason}, ${e.message}`, {
+                target: "do-sync-config",
+            });
         }
 
         logger.info(`===> gasLimit: ${gasLimit}`, {
-            target: "triggerSyncConfig",
+            target: "do-sync-config",
         });
         const nonce = await lifecycle.nearEthereum.getNonce(deriveAddress);
         logger.info(`===> nonce: ${nonce}`, {
-            target: "triggerSyncConfig",
+            target: "do-sync-config",
         });
         const balance = await lifecycle.nearEthereum.getBalance(deriveAddress);
         logger.info(`===> balance: ${balance}`, {
-            target: "triggerSyncConfig",
+            target: "do-sync-config",
         });
         let { maxFeePerGas, maxPriorityFeePerGas } = await lifecycle.nearEthereum.queryGasPrice();
         maxFeePerGas = (BigInt(maxFeePerGas) * BigInt(3) / BigInt(2)).toString();
         maxPriorityFeePerGas = (BigInt(maxPriorityFeePerGas) * BigInt(3) / BigInt(2)).toString();
         logger.info(`===> maxFeePerGas: ${maxFeePerGas}, maxPriorityFeePerGas: ${maxPriorityFeePerGas}`, {
-            target: "triggerSyncConfig",
+            target: "do-sync-config",
         });
         // call Aggregator sync_publish_config_to_remote()
         // @ts-ignore
         // const mpcConfig = await lifecycle.near.contractAggregator(publishChainConfig.aggregator!).get_mpc_config();
         // logger.info(`===> mpcConfig: ${JSON.stringify(mpcConfig)}`, {
-        //     target: "triggerSyncConfig",
+        //     target: "do-sync-config",
         // });
 
         let result;
@@ -395,7 +401,7 @@ export class PublisherStarter {
         } catch (e) {
             // @ts-ignore
             logger.error(`===> sync_publish_config_to_remote error, try get result from indexer: ${e.message}`, {
-                target: "triggerSyncConfig",
+                target: "do-sync-config",
             });
             // @ts-ignore
             if (e.message.includes("Exceeded the prepaid gas")) {
@@ -431,12 +437,12 @@ export class PublisherStarter {
             } catch (e) {
                 // @ts-ignore
                 logger.error(`===> relayMpcTx error: ${JSON.stringify(e.cause)}, ${e.reason}`, {
-                    target: "triggerSyncConfig",
+                    target: "do-sync-config",
                 });
             }
         } else {
             logger.error(`===> sync_publish_config_to_remote error: can't find result from indexer, aggregator: ${lifecycle.aggregator}, chain_id: ${lifecycle.targetChain.id.toString()}, version: ${publishChainConfig.version}`, {
-                target: "triggerSyncConfig",
+                target: "do-sync-config",
             });
         }
     }
@@ -462,11 +468,12 @@ export class PublisherStarter {
         // console.log("### signedTransaction", signedTransaction);
 
         const txHash = await lifecycle.nearEthereum.relayTransaction(signedTransaction);
-        console.log("### relayTx", txHash);
+        logger.info(`===> [${lifecycle.targetChain.name}-${lifecycle.targetChain.id}] tx: ${txHash} `, {
+            target: " 🚀 ",
+        });
     }
 
     async deriveXAPIAddress(aggregator: string, lifecycle: PublisherLifecycle) {
-        assert(aggregator != undefined, "Derive aggregator is ", aggregator);
         return (await lifecycle.nearEthereum.deriveAddress(aggregator, `XAPI-${lifecycle.targetChain.id.toString()}`)).address;
     }
 
