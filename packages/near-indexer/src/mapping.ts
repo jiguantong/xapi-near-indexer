@@ -49,7 +49,11 @@ function handlePublish(logs: string[], blockHeader: near.BlockHeader, receipt: n
     response.save();
   }
 
-  const _chainConfigData = _eventData.mustGet("chain_config").toObject()
+  let maybeChainConfig = _eventData.get("chain_config");
+  if (!maybeChainConfig) {
+    maybeChainConfig = _eventData.get("publish_chain_config");
+  }
+  const _chainConfigData = maybeChainConfig!.toObject()
   const _version = _chainConfigData.mustGet("version").toString();
   let chainConfig = PublishChainConfig.load(_version);
   if (chainConfig == null) {

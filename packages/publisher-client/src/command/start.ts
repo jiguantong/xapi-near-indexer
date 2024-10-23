@@ -10,7 +10,7 @@ import {
     XAPIConfig,
     NearI,
     NearW,
-    MpcOptions, XAPIResponse, Signature, PublishChainConfig, RequestMade
+    MpcOptions, XAPIResponse, Signature, PublishChainConfig, RequestMade,
 } from "@ringdao/xapi-common";
 import { HelixChain, HelixChainConf } from "@helixbridge/helixconf";
 
@@ -242,9 +242,11 @@ export class PublisherStarter {
         logger.info(`===> mpcConfig: ${JSON.stringify(mpcConfig)}`, {
             target: "triggerPublish",
         });
+
+        let result;
         try {
             // @ts-ignore
-            const result = await lifecycle.near.contractAggregator(aggregated.aggregator!).publish_external(
+            result = await lifecycle.near.contractAggregator(aggregated.aggregator!).publish_external(
                 {
                     signerAccount: new NearAccount(lifecycle.near.near.connection, lifecycle.nearAccount),
                     args: {
@@ -255,27 +257,46 @@ export class PublisherStarter {
                     amount: this.bigIntMin([MAX_MPC_DEPOSIT, BigInt(mpcConfig.attached_balance)]).toString()
                 }
             );
-            console.log("publish_external result", result);
-            if (result && result.signature) {
-                const _signature = JSON.parse(result.signature);
-                try {
-                    await this.relayMpcTx(result.response.chain_id, Address.fromString(result.chain_config.xapi_address), result.call_data, {
-                        id: "0",
-                        big_r_affine_point: _signature.big_r.affine_point,
-                        s_scalar: _signature.s.scalar,
-                        recovery_id: _signature.recovery_id
-                    }, result.mpc_options, lifecycle);
-                } catch (e) {
-                    console.log(e);
-                    // @ts-ignore
-                    logger.error(`===> relayMpcTx error: ${JSON.stringify(e.cause)}, ${e.reason}`, {
-                        target: "triggerPublish",
-                    });
-                }
-            }
         } catch (e) {
-            // todo if timeout, wait and find published event and relay
             console.log("publish error", e);
+            logger.error(`===> publish_external error, try get result from indexer, aggregator: ${lifecycle.aggregator}, request_id: ${relatedRequest.requestId}`, {
+                target: "triggerPublish",
+            });
+            await setTimeout(5000);
+            result =
+                await this.nearGraphqlService.queryPublishSignature({
+                    endpoint: XAPIConfig.graphql.endpoint('near'),
+                    requestId: relatedRequest.requestId,
+                    aggregator: lifecycle.aggregator
+                });
+        }
+        console.log("publish_external result", result);
+        if (result && result.signature) {
+            let _signature = result.signature;
+            if (typeof _signature == 'string') {
+                // @ts-ignore
+                _signature = JSON.parse(result.signature);
+            }
+            try {
+                await this.relayMpcTx(result.response.chain_id, Address.fromString(result.publish_chain_config.xapi_address), result.call_data, {
+                    id: "0",
+                    // @ts-ignore
+                    big_r_affine_point: _signature.big_r_affine_point || _signature.big_r.affine_point,
+                    // @ts-ignore
+                    s_scalar: _signature.s_scalar || _signature.s.scalar,
+                    recovery_id: _signature.recovery_id
+                }, result.mpc_options, lifecycle);
+            } catch (e) {
+                console.log(e);
+                // @ts-ignore
+                logger.error(`===> relayMpcTx error: ${JSON.stringify(e.cause)}, ${e.reason}`, {
+                    target: "triggerPublish",
+                });
+            }
+        } else {
+            logger.error(`===> publish_external error: can't find result from indexer, aggregator: ${lifecycle.aggregator}, request_id: ${relatedRequest.requestId}`, {
+                target: "triggerPublish",
+            });
         }
     }
 
@@ -319,9 +340,11 @@ export class PublisherStarter {
         logger.info(`===> mpcConfig: ${JSON.stringify(mpcConfig)}`, {
             target: "triggerSyncConfig",
         });
+
+        let result;
         try {
             // @ts-ignore
-            const result = await lifecycle.near.contractAggregator(publishChainConfig.aggregator!).sync_publish_config_to_remote(
+            result = await lifecycle.near.contractAggregator(publishChainConfig.aggregator!).sync_publish_config_to_remote(
                 {
                     signerAccount: new NearAccount(lifecycle.near.near.connection, lifecycle.nearAccount),
                     args: {
@@ -332,26 +355,47 @@ export class PublisherStarter {
                     amount: this.bigIntMin([MAX_MPC_DEPOSIT, BigInt(mpcConfig.attached_balance)]).toString()
                 }
             );
-            console.log("sync_publish_config_to_remote result", result);
-            if (result && result.signature) {
-                const _signature = JSON.parse(result.signature);
-                try {
-                    await this.relayMpcTx(result.chain_id, result.xapi_address, result.call_data, {
-                        id: "0",
-                        big_r_affine_point: _signature.big_r.affine_point,
-                        s_scalar: _signature.s.scalar,
-                        recovery_id: _signature.recovery_id
-                    }, result.mpc_options, lifecycle);
-                } catch (e) {
-                    // @ts-ignore
-                    logger.error(`===> relayMpcTx error: ${JSON.stringify(e.cause)}, ${e.reason}`, {
-                        target: "triggerSyncConfig",
-                    });
-                }
-            }
         } catch (e) {
-            // todo if timeout, wait and find synced event and relay
             console.log("sync config error", e);
+            logger.error(`===> sync_publish_config_to_remote error, try get result from indexer`, {
+                target: "triggerSyncConfig",
+            });
+            await setTimeout(5000);
+            result =
+                await this.nearGraphqlService.querySyncConfigSignature({
+                    endpoint: XAPIConfig.graphql.endpoint('near'),
+                    chainId: lifecycle.targetChain.id.toString(),
+                    version: publishChainConfig.version,
+                    aggregator: lifecycle.aggregator
+                });
+        }
+        console.log("sync_publish_config_to_remote result", result);
+        if (result && result.signature) {
+            let _signature = result.signature;
+            if (typeof _signature == 'string') {
+                // @ts-ignore
+                _signature = JSON.parse(result.signature);
+            }
+            try {
+                // @ts-ignore
+                await this.relayMpcTx(result.chain_id, result.xapi_address, result.call_data, {
+                    id: "0",
+                    // @ts-ignore
+                    big_r_affine_point: _signature.big_r_affine_point || _signature.big_r.affine_point,
+                    // @ts-ignore
+                    s_scalar: _signature.s_scalar || _signature.s.scalar,
+                    recovery_id: _signature.recovery_id
+                }, result.mpc_options, lifecycle);
+            } catch (e) {
+                // @ts-ignore
+                logger.error(`===> relayMpcTx error: ${JSON.stringify(e.cause)}, ${e.reason}`, {
+                    target: "triggerSyncConfig",
+                });
+            }
+        } else {
+            logger.error(`===> sync_publish_config_to_remote error: can't find result from indexer, aggregator: ${lifecycle.aggregator}, chain_id: ${lifecycle.targetChain.id.toString()}, version: ${publishChainConfig.version}`, {
+                target: "triggerSyncConfig",
+            });
         }
     }
 
