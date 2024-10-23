@@ -205,7 +205,7 @@ export class XAPIExporterStarter {
           answers,
         };
         // @ts-ignore
-        const reporteDeposit = await aggregator.estimate_report_deposit(report);
+        const reporteDeposit = await aggregator.estimate_storage_deposit(report);
         // @ts-ignore
         reported = await aggregator.report({
           signerAccount: near.nearAccount(),

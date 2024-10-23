@@ -134,7 +134,7 @@ export class NearI {
         'get_staking_contract',
         'get_data_sources',
         'get_mpc_config',
-        'estimate_report_deposit',
+        'estimate_storage_deposit',
       ],
       changeMethods: [
         'publish_external',
