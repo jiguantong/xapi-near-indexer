@@ -18,6 +18,10 @@ program
     .description("start XAPI Publisher")
     .action(async (options) => {
         const c = Container.get(PublisherStarter);
+        if (!process.env.NEAR_ACCOUNT || !process.env.NEAR_PRIVATE_KEY) {
+            logger.error(`Please set env: NEAR_ACCOUNT & NEAR_PRIVATE_KEY`, { target: 'main' });
+            return;
+        }
         await c.start({
             targetChains: options.chain,
             nearAccount: process.env.NEAR_ACCOUNT!,

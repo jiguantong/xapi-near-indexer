@@ -1,3 +1,7 @@
+if (process.env.XAPI_REWRITE_CONSOLE) {
+  console.log = function () { return; };
+}
+
 import * as nearAPI from "near-api-js";
 import {
   JsonRpcProvider,
@@ -92,7 +96,7 @@ export class NearI {
   constructor(
     private readonly _near: nearAPI.Near,
     private readonly _accountId: string,
-  ) {}
+  ) { }
 
   get accountId(): string {
     return this._accountId;
