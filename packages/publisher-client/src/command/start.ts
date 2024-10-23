@@ -32,6 +32,8 @@ export interface PublisherLifecycle extends StartOptions {
     aggregator: string;
 }
 
+const MAX_MPC_DEPOSIT = 1000000000000000000000000n;
+
 @Service()
 export class PublisherStarter {
     private _nearInstance: Record<string, NearI> = {};
@@ -250,12 +252,10 @@ export class PublisherStarter {
                         mpc_options: { nonce: nonce.toString(), gas_limit: gasLimit.toString(), max_fee_per_gas: maxFeePerGas.toString(), max_priority_fee_per_gas: maxPriorityFeePerGas.toString() }
                     },
                     gas: "300000000000000",
-                    // !!! Pay attention to too max balance config
-                    amount: mpcConfig.attached_balance
+                    amount: this.bigIntMin([MAX_MPC_DEPOSIT, BigInt(mpcConfig.attached_balance)]).toString()
                 }
             );
             console.log("publish_external result", result);
-            // todo if published, relay
             if (result && result.signature) {
                 const _signature = JSON.parse(result.signature);
                 try {
@@ -329,11 +329,10 @@ export class PublisherStarter {
                         mpc_options: { nonce: nonce.toString(), gas_limit: gasLimit.toString(), max_fee_per_gas: maxFeePerGas.toString(), max_priority_fee_per_gas: maxPriorityFeePerGas.toString() }
                     },
                     gas: "300000000000000",
-                    amount: mpcConfig.attached_balance
+                    amount: this.bigIntMin([MAX_MPC_DEPOSIT, BigInt(mpcConfig.attached_balance)]).toString()
                 }
             );
             console.log("sync_publish_config_to_remote result", result);
-            // todo if succeed, relay
             if (result && result.signature) {
                 const _signature = JSON.parse(result.signature);
                 try {
@@ -389,5 +388,9 @@ export class PublisherStarter {
         const ne = new NearEthereum(chain.rpc, chain.id.toString());
         this.nearEthereumMap[chain.id.toString()] = ne;
         return ne;
+    }
+
+    bigIntMin(args: any[]) {
+        return args.reduce((m, e) => e < m ? e : m);
     }
 }
