@@ -27,7 +27,7 @@ export interface XAPIResponse {
   chain_id: string
   reporter_reward_addresses: string[]
   aggregator?: string
-  error_code: string
+  error_code: number
 }
 
 export interface TopStaked {
@@ -51,7 +51,6 @@ export interface DatasourceAuth {
   place_path: AuthPlacePathString
   value_path: AuthValuePathString
 }
-
 
 
 export interface Signature {
@@ -104,7 +103,6 @@ export interface MpcOptions {
   max_fee_per_gas: string
   max_priority_fee_per_gas: string
 }
-
 
 export interface Report {
   request_id: string

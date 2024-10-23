@@ -1,15 +1,27 @@
 [
-  { "inputs": [], "stateMutability": "nonpayable", "type": "constructor" },
+  {
+    "inputs": [],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
   {
     "inputs": [
-      { "internalType": "address", "name": "owner", "type": "address" }
+      {
+        "internalType": "address",
+        "name": "owner",
+        "type": "address"
+      }
     ],
     "name": "OwnableInvalidOwner",
     "type": "error"
   },
   {
     "inputs": [
-      { "internalType": "address", "name": "account", "type": "address" }
+      {
+        "internalType": "address",
+        "name": "account",
+        "type": "address"
+      }
     ],
     "name": "OwnableUnauthorizedAccount",
     "type": "error"
@@ -92,8 +104,16 @@
             "name": "reporters",
             "type": "address[]"
           },
-          { "internalType": "bytes", "name": "result", "type": "bytes" },
-          { "internalType": "uint16", "name": "errorCode", "type": "uint16" }
+          {
+            "internalType": "bytes",
+            "name": "result",
+            "type": "bytes"
+          },
+          {
+            "internalType": "uint16",
+            "name": "errorCode",
+            "type": "uint16"
+          }
         ],
         "indexed": false,
         "internalType": "struct ResponseData",
@@ -224,22 +244,56 @@
     "type": "function"
   },
   {
-    "inputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
     "name": "aggregatorConfigs",
     "outputs": [
-      { "internalType": "string", "name": "aggregator", "type": "string" },
-      { "internalType": "address", "name": "rewardAddress", "type": "address" },
-      { "internalType": "uint256", "name": "reportersFee", "type": "uint256" },
-      { "internalType": "uint256", "name": "publishFee", "type": "uint256" },
-      { "internalType": "uint256", "name": "version", "type": "uint256" },
-      { "internalType": "bool", "name": "suspended", "type": "bool" }
+      {
+        "internalType": "string",
+        "name": "aggregator",
+        "type": "string"
+      },
+      {
+        "internalType": "address",
+        "name": "rewardAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "reportersFee",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "publishFee",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "version",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bool",
+        "name": "suspended",
+        "type": "bool"
+      }
     ],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [
-      { "internalType": "uint256", "name": "requestId", "type": "uint256" },
+      {
+        "internalType": "uint256",
+        "name": "requestId",
+        "type": "uint256"
+      },
       {
         "components": [
           {
@@ -247,8 +301,16 @@
             "name": "reporters",
             "type": "address[]"
           },
-          { "internalType": "bytes", "name": "result", "type": "bytes" },
-          { "internalType": "uint16", "name": "errorCode", "type": "uint16" }
+          {
+            "internalType": "bytes",
+            "name": "result",
+            "type": "bytes"
+          },
+          {
+            "internalType": "uint16",
+            "name": "errorCode",
+            "type": "uint16"
+          }
         ],
         "internalType": "struct ResponseData",
         "name": "response",
@@ -262,26 +324,56 @@
   },
   {
     "inputs": [
-      { "internalType": "address", "name": "exAggregator", "type": "address" },
-      { "internalType": "string", "name": "requestData", "type": "string" },
-      { "internalType": "bytes4", "name": "callbackFunction", "type": "bytes4" }
+      {
+        "internalType": "address",
+        "name": "exAggregator",
+        "type": "address"
+      },
+      {
+        "internalType": "string",
+        "name": "requestData",
+        "type": "string"
+      },
+      {
+        "internalType": "bytes4",
+        "name": "callbackFunction",
+        "type": "bytes4"
+      }
     ],
     "name": "makeRequest",
-    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
     "stateMutability": "payable",
     "type": "function"
   },
   {
     "inputs": [],
     "name": "owner",
-    "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [],
     "name": "pendingOwner",
-    "outputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
     "stateMutability": "view",
     "type": "function"
   },
@@ -295,17 +387,41 @@
   {
     "inputs": [],
     "name": "requestCount",
-    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
     "stateMutability": "view",
     "type": "function"
   },
   {
-    "inputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
     "name": "requests",
     "outputs": [
-      { "internalType": "string", "name": "aggregator", "type": "string" },
-      { "internalType": "string", "name": "requestData", "type": "string" },
-      { "internalType": "address", "name": "requester", "type": "address" },
+      {
+        "internalType": "string",
+        "name": "aggregator",
+        "type": "string"
+      },
+      {
+        "internalType": "string",
+        "name": "requestData",
+        "type": "string"
+      },
+      {
+        "internalType": "address",
+        "name": "requester",
+        "type": "address"
+      },
       {
         "internalType": "address",
         "name": "callbackContract",
@@ -321,7 +437,11 @@
         "name": "status",
         "type": "uint8"
       },
-      { "internalType": "address", "name": "exAggregator", "type": "address" },
+      {
+        "internalType": "address",
+        "name": "exAggregator",
+        "type": "address"
+      },
       {
         "components": [
           {
@@ -329,21 +449,37 @@
             "name": "reporters",
             "type": "address[]"
           },
-          { "internalType": "bytes", "name": "result", "type": "bytes" },
-          { "internalType": "uint16", "name": "errorCode", "type": "uint16" }
+          {
+            "internalType": "bytes",
+            "name": "result",
+            "type": "bytes"
+          },
+          {
+            "internalType": "uint16",
+            "name": "errorCode",
+            "type": "uint16"
+          }
         ],
         "internalType": "struct ResponseData",
         "name": "response",
         "type": "tuple"
       },
-      { "internalType": "uint256", "name": "payment", "type": "uint256" }
+      {
+        "internalType": "uint256",
+        "name": "payment",
+        "type": "uint256"
+      }
     ],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [
-      { "internalType": "uint256", "name": "requestId", "type": "uint256" }
+      {
+        "internalType": "uint256",
+        "name": "requestId",
+        "type": "uint256"
+      }
     ],
     "name": "retryFulfill",
     "outputs": [],
@@ -351,19 +487,51 @@
     "type": "function"
   },
   {
-    "inputs": [{ "internalType": "address", "name": "", "type": "address" }],
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
     "name": "rewards",
-    "outputs": [{ "internalType": "uint256", "name": "", "type": "uint256" }],
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [
-      { "internalType": "string", "name": "aggregator", "type": "string" },
-      { "internalType": "uint256", "name": "reportersFee", "type": "uint256" },
-      { "internalType": "uint256", "name": "publishFee", "type": "uint256" },
-      { "internalType": "address", "name": "rewardAddress", "type": "address" },
-      { "internalType": "uint256", "name": "version", "type": "uint256" }
+      {
+        "internalType": "string",
+        "name": "aggregator",
+        "type": "string"
+      },
+      {
+        "internalType": "uint256",
+        "name": "reportersFee",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "publishFee",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "rewardAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "version",
+        "type": "uint256"
+      }
     ],
     "name": "setAggregatorConfig",
     "outputs": [],
@@ -372,7 +540,11 @@
   },
   {
     "inputs": [
-      { "internalType": "address", "name": "exAggregator", "type": "address" }
+      {
+        "internalType": "address",
+        "name": "exAggregator",
+        "type": "address"
+      }
     ],
     "name": "suspendAggregator",
     "outputs": [],
@@ -381,7 +553,11 @@
   },
   {
     "inputs": [
-      { "internalType": "address", "name": "newOwner", "type": "address" }
+      {
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
     ],
     "name": "transferOwnership",
     "outputs": [],

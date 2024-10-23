@@ -140,6 +140,7 @@ export class NearI {
         'publish_external',
         'sync_publish_config_to_remote',
         'report',
+
       ],
       useLocalViewExecution: false,
     });

@@ -9,6 +9,8 @@ import {
   AbstractGraphqlService,
   Aggregator,
   PublishChainConfig,
+  PublishEvent,
+  SyncPublishChainConfigEvent,
 } from "@ringdao/xapi-common";
 
 export interface QueryWithAggregator extends BasicGraphqlParams {
@@ -16,11 +18,19 @@ export interface QueryWithAggregator extends BasicGraphqlParams {
 }
 
 export interface QueryWithPublishChain extends QueryWithAggregator {
-  chainId: bigint
+  chainId: string
 }
 
 export interface QueryWithVersion extends QueryWithAggregator {
-  version: bigint
+  version: string
+}
+
+export interface QueryWithChainVersion extends QueryWithPublishChain {
+  version: string
+}
+
+export interface QueryWithRequestId extends QueryWithAggregator {
+  requestId: string
 }
 
 @Service()
@@ -65,7 +75,7 @@ export class EvmGraphqlService extends AbstractGraphqlService {
     return data["requestMades"];
   }
 
-  async queryAggregatorConfig(params: QueryWithVersion): Promise<{version: string}> {
+  async queryAggregatorConfig(params: QueryWithVersion): Promise<{ version: string }> {
     const query = `
     query PublishChainConfigs(
       $version: BigInt
@@ -182,5 +192,125 @@ export class NearGraphqlService extends AbstractGraphqlService {
       variables: {},
     });
     return data["aggregators"];
+  }
+
+  async queryPublishSignature(params: QueryWithRequestId): Promise<PublishEvent> {
+    const query = `
+    query PublishEvents(
+      $request_id: String
+      $aggregator: String
+    ) {
+      publishEvents(first: 1, orderBy: id, orderDirection: desc,
+        where: {
+          request_id: $request_id
+          aggregator: $aggregator
+        }
+      ) {
+        id
+        publish_chain_config {
+          chain_id
+          id
+          xapi_address
+          reporters_fee
+          publish_fee
+          version
+          reward_address
+        }
+        request_id
+        response {
+          chain_id
+          id
+          reporter_reward_addresses
+          request_id
+          result
+          started_at
+          status
+          updated_at
+          valid_reporters
+        }
+        signature {
+          big_r_affine_point
+          id
+          recovery_id
+          s_scalar
+        }
+        call_data
+        mpc_options {
+          gas_limit
+          id
+          max_fee_per_gas
+          max_priority_fee_per_gas
+          nonce
+        }
+        aggregator
+      }
+    }
+    `;
+    const data = await super.post({
+      ...params,
+      query,
+      variables: {
+        request_id: params.requestId,
+        aggregator: params.aggregator
+      },
+    });
+    return data["publishEvents"].length == 0 ? null : data["publishEvents"][0];
+  }
+
+  async querySyncConfigSignature(params: QueryWithChainVersion): Promise<SyncPublishChainConfigEvent> {
+    const query = `
+    query SyncPublishChainConfigEvents(
+      $aggregator: String
+      $chain_id: BigInt
+      $version: BigInt
+    ) {
+      syncPublishChainConfigEvents(first: 1, orderBy: id, orderDirection: desc, 
+        where: {
+          aggregator: $aggregator,
+          chain_id: $chain_id,
+          version: $version
+        }
+      ) {
+        call_data
+        chain_id
+        id
+        mpc_options {
+          gas_limit
+          id
+          max_fee_per_gas
+          max_priority_fee_per_gas
+          nonce
+        }
+        publish_chain_config {
+          chain_id
+          id
+          publish_fee
+          reporters_fee
+          reward_address
+          version
+          xapi_address
+        }
+        signature {
+          big_r_affine_point
+          id
+          recovery_id
+          s_scalar
+        }
+        version
+        xapi_address
+        aggregator
+      }
+    }
+    `;
+    const data = await super.post({
+      ...params,
+      query,
+      variables: {
+        chain_id: params.chainId,
+        version: params.version,
+        aggregator: params.aggregator
+      },
+    });
+    return data["syncPublishChainConfigEvents"].length == 0 ? null : data["syncPublishChainConfigEvents"][0];
   }
 }
