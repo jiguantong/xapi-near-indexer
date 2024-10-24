@@ -26,7 +26,7 @@ import {
 import { HelixChain, HelixChainConf } from "@helixbridge/helixconf";
 import { KeyPairString } from "near-api-js/lib/utils";
 
-export interface BaseStartOptions {}
+export interface BaseStartOptions { }
 
 export interface StartOptions extends BaseStartOptions {
   rewardAddress: string;
@@ -49,7 +49,7 @@ export class XAPIExporterStarter {
   constructor(
     private evmGraphqlService: EvmGraphqlService,
     private nearGraphqlService: NearGraphqlService,
-  ) {}
+  ) { }
 
   private async near(
     options: StartOptions,
@@ -190,7 +190,7 @@ export class XAPIExporterStarter {
       // @ts-ignore
       const datasources: Datasource[] = await aggregator.get_data_sources();
       if (!datasources || !datasources.length) {
-        logger.debug(`missing datasource for [${todo.aggregator}] skip this`, {
+        logger.warn(`missing datasource for [${todo.aggregator}] skip this`, {
           target: "reporter",
         });
         continue;
@@ -256,10 +256,10 @@ export class XAPIExporterStarter {
     for (const ds of datasources) {
       try {
         const headers: Record<string, any> = {
-          "x-app": "xapi-reporter",
+          // "x-app": "xapi-reporter",
         };
         const reqData = this._mergeData(ds.body_json, todo.requestData);
-        const params = {};
+        const params: Record<string, any> = {};
         const authValue = this._readAuth(ds.auth.value_path);
         if (authValue) {
           const place_path = ds.auth.place_path;
@@ -273,7 +273,7 @@ export class XAPIExporterStarter {
           }
           if (place_path.indexOf("query.") === 0) {
             const queryName = place_path.replace("query.", "");
-            this._setNestedProperty(params, queryName, authValue);
+            params[queryName] = authValue;
           }
         }
         const axiosOptions: any = {
@@ -316,7 +316,7 @@ export class XAPIExporterStarter {
     if (!valuePath) return undefined;
     if (valuePath.indexOf("env.") === 0) {
       const envKey = valuePath.replace("env.", "");
-      return process.env[envKey.toUpperCase()];
+      return process.env[envKey];
     }
     return undefined;
   }
