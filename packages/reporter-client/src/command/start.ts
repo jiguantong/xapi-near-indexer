@@ -26,18 +26,23 @@ import {
 import { HelixChain, HelixChainConf } from "@helixbridge/helixconf";
 import { KeyPairString } from "near-api-js/lib/utils";
 
-export interface BaseStartOptions { }
+export interface BaseStartOptions {}
 
 export interface StartOptions extends BaseStartOptions {
   rewardAddress: string;
   nearAccount: string;
   nearPrivateKey: KeyPairString;
+  minimumRewards: Record<string, bigint>;
 }
 
 export interface ReporterLifecycle extends StartOptions {
   near: NearI;
+  aggregatorId: string;
   targetChain: HelixChainConf;
+  minimumReward?: bigint;
 }
+
+const MAX_REPORTER_DEPOSIT = 100000000000000000000000n;
 
 @Service()
 export class XAPIExporterStarter {
@@ -49,7 +54,7 @@ export class XAPIExporterStarter {
   constructor(
     private evmGraphqlService: EvmGraphqlService,
     private nearGraphqlService: NearGraphqlService,
-  ) { }
+  ) {}
 
   private async near(
     options: StartOptions,
@@ -77,33 +82,28 @@ export class XAPIExporterStarter {
         const aggregators = await this.nearGraphqlService.queryAggregators({
           endpoint: this._nearGraphqlEndpoint,
         });
-        const targetChainIds: string[] = [];
-        for (const aggregator of aggregators) {
-          const scs = aggregator.supported_chains;
-          for (const sc of scs) {
-            if (targetChainIds.indexOf(sc) !== -1) continue;
-            targetChainIds.push(sc);
-          }
-        }
-        const targetChains = targetChainIds
-          .map((item) => HelixChain.get(item))
-          .filter((item) => item != undefined);
 
-        for (const chain of targetChains) {
-          try {
-            const near = await this.near(options, chain);
-            logger.info(`==== start reporter for ${chain.code} ====`, {
-              target: "reporter",
-            });
-            await this.run({
-              ...options,
-              near,
-              targetChain: chain,
-            });
-          } catch (e: any) {
-            logger.error(`run reporter errored: ${e.stack || e}`, {
-              target: "reporter",
-            });
+        for (const aggregator of aggregators) {
+          for (const supportedChain of aggregator.supported_chains) {
+            const chain = HelixChain.get(supportedChain);
+            if (!chain) continue;
+            try {
+              const near = await this.near(options, chain);
+              logger.info(`==== start reporter for ${chain.code} ====`, {
+                target: "reporter",
+              });
+              await this.run({
+                ...options,
+                near,
+                aggregatorId: aggregator.id,
+                targetChain: chain,
+                minimumReward: options.minimumRewards[chain.code],
+              });
+            } catch (e: any) {
+              logger.error(`run reporter errored: ${e.stack || e}`, {
+                target: "reporter",
+              });
+            }
           }
         }
         await setTimeout(1000);
@@ -133,10 +133,33 @@ export class XAPIExporterStarter {
   }
 
   private async run(lifecycle: ReporterLifecycle) {
-    const { near, targetChain } = lifecycle;
+    const { near, targetChain, minimumReward } = lifecycle;
+    const aggregator = near.contractAggregator(lifecycle.aggregatorId);
+
+    // @ts-ignore
+    const datasources: Datasource[] = await aggregator.get_data_sources();
+    if (!datasources || !datasources.length) {
+      logger.warn(
+        `missing datasource for [${lifecycle.aggregatorId}] skip this`,
+        {
+          target: "reporter",
+        },
+      );
+      return;
+    }
+
+    const reporterRequired: ReporterRequired =
+      // @ts-ignore
+      await aggregator.get_reporter_required();
+
     const waites = await this.evmGraphqlService.queryTodoRequestMade({
       endpoint: XAPIConfig.graphql.endpoint(targetChain.code),
+      aggregator: lifecycle.aggregatorId,
+      minimumRewards: minimumReward
+        ? minimumReward * BigInt(reporterRequired.quorum)
+        : 0n,
     });
+
     const aggregatedEvents =
       await this.nearGraphqlService.queryAggregatedeEvents({
         endpoint: this._nearGraphqlEndpoint,
@@ -150,96 +173,105 @@ export class XAPIExporterStarter {
 
     const todos: RequestMade[] = [];
     for (const todo of possibleTodos) {
-      const aggeregator = near.contractAggregator(todo.aggregator);
       // @ts-ignore
-      const response: XAPIResponse = await aggeregator.get_response({
+      const response: XAPIResponse | undefined = await aggregator.get_response({
         request_id: todo.requestId,
       });
-      if (response.status !== "FETCHING") continue;
-      todos.push(todo);
+      if (!response || (response && response.status === "FETCHING")) {
+        todos.push(todo);
+      }
     }
     if (!todos.length) {
       logger.debug("not have any todo jobs", { target: "report" });
       return;
     }
 
-    for (const todo of todos) {
-      const aggregator = near.contractAggregator(todo.aggregator);
-      const reporterRequired: ReporterRequired =
-        // @ts-ignore
-        await aggregator.get_reporter_required();
+    const maxResultLength: number | undefined =
+      // @ts-ignore
+      await aggregator.get_max_result_length();
 
-      const stakingContract = await this._stakingContract(
-        lifecycle,
-        todo.aggregator,
-      );
+    const stakingContract = await this._stakingContract(
+      lifecycle,
+      lifecycle.aggregatorId,
+    );
+    for (const todo of todos) {
+      // @ts-ignore
+      const reports: Report[] = aggregator.get_reports({
+        request_id: todo.requestId,
+      });
+      if (
+        reports.find(
+          (item) =>
+            item.reporter?.toLowerCase() === near.accountId.toLowerCase(),
+        )
+      ) {
+        logger.info(
+          `you already report this ${todo.requestId} from ${targetChain}, skip this`,
+          { target: "reporter" },
+        );
+        return;
+      }
 
       // @ts-ignore
       const topStakeds: TopStaked[] = await stakingContract.get_top_staked({
         top: reporterRequired.quorum,
       });
-
       const includeMyself = topStakeds.find(
         (item) =>
           item.account_id.toLowerCase() === near.accountId.toLowerCase(),
       );
-
       if (!includeMyself) {
         continue;
       }
-      // @ts-ignore
-      const datasources: Datasource[] = await aggregator.get_data_sources();
-      if (!datasources || !datasources.length) {
-        logger.warn(`missing datasource for [${todo.aggregator}] skip this`, {
-          target: "reporter",
-        });
-        continue;
+
+      const answers = await this.fetchApi(datasources, todo);
+      if (maxResultLength) {
+        for (const answer of answers) {
+          if (!answer.result) {
+            continue;
+          }
+          const resultLength = answer.result.length;
+          if (resultLength > maxResultLength) {
+            answer.result = undefined;
+            answer.error = `the result is too long, maxLength: ${maxResultLength}, currentLength: ${resultLength}`;
+          }
+        }
       }
 
-      let reported: any;
-      try {
-        const answers = await this.fetchApi(datasources, todo);
-        const report: Report = {
-          request_id: todo.requestId,
-          reward_address: lifecycle.rewardAddress,
-          answers,
-        };
-        // @ts-ignore
-        const reporteDeposit = await aggregator.estimate_storage_deposit(report);
-        // @ts-ignore
-        reported = await aggregator.report({
-          signerAccount: near.nearAccount(),
-          args: report,
-          gas: "300000000000000",
-          amount: reporteDeposit,
-        });
-      } catch (e: any) {
-        const answers: Answer[] = [];
-        for (const ds of datasources) {
-          answers.push({
-            data_source_name: ds.name,
-            error: Tools.ellipsisText({
-              text: `${e.message || e.msg || "ERROR_REPORT"}`,
-              len: 480,
-            }),
-          });
+      let times = 0;
+      while (true) {
+        times += 1;
+        if (times > 3) {
+          logger.warn("failed report 3 times, skipp this round.");
+          break;
         }
-        const report: Report = {
-          request_id: todo.requestId,
-          reward_address: lifecycle.rewardAddress,
-          answers,
-        };
-        // @ts-ignore
-        const reporteDeposit = await aggregator.estimate_report_deposit(report);
-        // @ts-ignore
-        reported = await aggregator.report({
-          signerAccount: near.nearAccount(),
-          args: report,
-          gas: "300000000000000",
-          amount: reporteDeposit,
-        });
+        try {
+          const report: Report = {
+            request_id: todo.requestId,
+            reward_address: lifecycle.rewardAddress,
+            answers,
+          };
+          const reporteDeposit =
+            // @ts-ignore
+            await aggregator.estimate_storage_deposit(report);
+          // @ts-ignore
+          const _reported = await aggregator.report({
+            signerAccount: near.nearAccount(),
+            args: report,
+            gas: "300000000000000",
+            amount: this._bigIntMin([MAX_REPORTER_DEPOSIT, BigInt(reporteDeposit)]),
+          });
+          break;
+        } catch (e: any) {
+          logger.warning(
+            `failed to report: ${e.message || e.msg || e}, times: ${times}`,
+            {
+              target: "reporter",
+            },
+          );
+          await setTimeout(2000);
+        }
       }
-      console.log(reported);
     }
 
     logger.debug(lifecycle.targetChain.code, {
@@ -255,11 +287,27 @@ export class XAPIExporterStarter {
     const answers: Answer[] = [];
     for (const ds of datasources) {
       try {
-        const headers: Record<string, any> = {
-          // "x-app": "xapi-reporter",
+        const headers: Record<string, any> = {};
+        const axiosOptions: any = {
+          responseType: "text",
+          method: ds.method,
+          url: ds.url,
+          headers,
         };
-        const reqData = this._mergeData(ds.body_json, todo.requestData);
-        const params: Record<string, any> = {};
+
+        if (ds.method.toLowerCase() === "get") {
+          const params = this._mergeData(ds.query_json, todo.requestData);
+          axiosOptions.params = params;
+          if (ds.body_json) {
+            axiosOptions.data = ds.body_json;
+          }
+        } else {
+          if (ds.query_json) {
+            axiosOptions.params = ds.query_json;
+          }
+          axiosOptions.data = this._mergeData(ds.body_json, todo.requestData);
+        }
+
         const authValue = this._readAuth(ds.auth.value_path);
         if (authValue) {
           const place_path = ds.auth.place_path;
@@ -269,27 +317,20 @@ export class XAPIExporterStarter {
           }
           if (place_path.indexOf("body.") === 0) {
             const fieldName = place_path.replace("body.", "");
-            this._setNestedProperty(reqData, fieldName, authValue);
+            if (!axiosOptions.data) {
+              axiosOptions.data = {};
+            }
+            this._setNestedProperty(axiosOptions.data, fieldName, authValue);
           }
           if (place_path.indexOf("query.") === 0) {
             const queryName = place_path.replace("query.", "");
-            params[queryName] = authValue;
+            if (!axiosOptions.params) {
+              axiosOptions.params = {};
+            }
+            axiosOptions.params[queryName] = authValue;
           }
         }
-        const axiosOptions: any = {
-          method: ds.method,
-          url: ds.url,
-          // data: ",",
-          headers,
-        };
-        if (ds.method.toLowerCase() === "get") {
-          axiosOptions.params = Object.assign({}, reqData, params);
-        } else {
-          axiosOptions.params = params;
-          axiosOptions.data = reqData;
-        }
         const response = await axios(axiosOptions);
-        console.log(response);
         answers.push({
           data_source_name: ds.name,
           result: response.data,
@@ -359,7 +400,7 @@ export class XAPIExporterStarter {
       if (!Array.isArray(fv) && Array.isArray(sv)) {
         return [...sv].push(fv);
       }
-      if (Array.isArray(fv) && Array.isArray(sv)) {
+      if (Array.isArray(fv) && !Array.isArray(sv)) {
         throw new Error(
           `can not merge array to object ${JSON.stringify(
             fv,
@@ -410,5 +451,9 @@ export class XAPIExporterStarter {
         }
       }
     });
+  }
+
+  private _bigIntMin(args: any[]) {
+    return args.reduce((m, e) => (e < m ? e : m));
   }
 }

@@ -14,29 +14,43 @@ export interface XAPIResponseParams extends QueryWithIds {
   status?: string[];
 }
 
+export interface QueryWithAggregator extends BasicGraphqlParams {
+  aggregator: string,
+}
+
+export interface QueryTodoRequestMades extends QueryWithAggregator {
+  minimumRewards: bigint,
+}
+
 @Service()
 export class EvmGraphqlService extends AbstractGraphqlService {
   async queryTodoRequestMade(
-    params: BasicGraphqlParams,
+    params: QueryTodoRequestMades,
   ): Promise<RequestMade[]> {
     const query = `
-    query QueryTodoRequestMades {
+    query QueryTodoRequestMades($aggregator: String!, minimumRewards: BigInt!) {
       requestMades(
-        where: {fulfilled: 0},
+        where: {
+          fulfilled: 0,
+          aggregator: $aggregator,
+          reportersFee_gte: $minimumRewards
+        },
         orderBy: id,
         orderDirection: asc,
         first: 50
       ) {
         id
-        requestId
-        aggregator
-        requestData
-        requester
-        blockNumber
-        blockTimestamp
+        xapiAddress
         transactionHash
-        fulfilled
+        requester
+        requestId
+        requestData
+        reportersFee
+        publishFee
+        aggregator
+        exAggregator
 
+        fulfilled
         blockTimestamp
         blockNumber
       }

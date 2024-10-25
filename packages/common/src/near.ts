@@ -139,6 +139,8 @@ export class NearI {
         'get_data_sources',
         'get_mpc_config',
         'estimate_storage_deposit',
+        'get_reports',
+        'get_max_result_length',
       ],
       changeMethods: [
         'publish_external',
