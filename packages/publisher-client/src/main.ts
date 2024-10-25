@@ -29,8 +29,7 @@ program
         const c = Container.get(PublisherStarter);
         await c.start({
             nearAccount: options.nearAccount,
-            // @ts-ignore
-            nearPrivateKey: options.nearPrivateKey!
+            nearPrivateKey: options.nearPrivateKey
         });
     });
 
