@@ -23,7 +23,10 @@ export abstract class AbstractGraphqlService {
     if (query.variables) {
       options.variables = query.variables;
     }
-    const response = await axios.post(query.endpoint, options, {
+    const requestBody = JSON.stringify(options, (key, value) =>
+      typeof value === "bigint" ? value.toString() : value,
+    );
+    const response = await axios.post(query.endpoint, requestBody, {
       headers: {
         "Content-Type": "application/json",
       },
@@ -31,9 +34,9 @@ export abstract class AbstractGraphqlService {
     const { errors, data } = response.data;
     if (errors) {
       throw new Error(
-        `[${query.endpoint}] \n${JSON.stringify(
-          options,
-        )} \nresposne is: ${JSON.stringify(errors)}`,
+        `[${query.endpoint}] \n${requestBody} \nresposne is: ${JSON.stringify(
+          errors,
+        )}`,
       );
     }
     // const gralphData = data.data;

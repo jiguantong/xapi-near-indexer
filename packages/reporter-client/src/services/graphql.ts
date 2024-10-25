@@ -28,7 +28,7 @@ export class EvmGraphqlService extends AbstractGraphqlService {
     params: QueryTodoRequestMades,
   ): Promise<RequestMade[]> {
     const query = `
-    query QueryTodoRequestMades($aggregator: String!, minimumRewards: BigInt!) {
+    query QueryTodoRequestMades($aggregator: String!, $minimumRewards: BigInt!) {
       requestMades(
         where: {
           fulfilled: 0,
@@ -59,6 +59,10 @@ export class EvmGraphqlService extends AbstractGraphqlService {
     const data = await super.post({
       ...params,
       query,
+      variables: {
+        aggregator: params.aggregator,
+        minimumRewards: params.minimumRewards,
+      },
     });
     return data["requestMades"];
   }
