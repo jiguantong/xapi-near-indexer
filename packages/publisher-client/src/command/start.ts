@@ -25,7 +25,6 @@ const homedir = require('os').homedir();
 export interface StartOptions {
     nearAccount: string,
     nearPrivateKey: KeyPairString,
-    targetChains: HelixChainConf[];
 }
 
 export interface PublisherLifecycle extends StartOptions {

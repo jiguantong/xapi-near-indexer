@@ -2,8 +2,7 @@ import 'reflect-metadata';
 
 import { Command } from 'commander';
 import { Container } from 'typedi';
-import { StartOptions, PublisherStarter } from './command/start';
-import { HelixChain, HelixChainConf } from '@helixbridge/helixconf';
+import { PublisherStarter } from './command/start';
 import { logger } from "@ringdao/xapi-common";
 
 const program = new Command();
@@ -16,17 +15,21 @@ program
 program
     .command("start")
     .description("start XAPI Publisher")
+    .requiredOption(
+        "--near-account <char>",
+        "near account",
+        process.env["XAPI_NEAR_ACCOUNT"],
+    )
+    .requiredOption(
+        "--near-private-key <char>",
+        "near private key",
+        process.env["XAPI_NEAR_PRIVATE_KEY"],
+    )
     .action(async (options) => {
         const c = Container.get(PublisherStarter);
-        if (!process.env.NEAR_ACCOUNT || !process.env.NEAR_PRIVATE_KEY) {
-            logger.error(`Please set env: NEAR_ACCOUNT & NEAR_PRIVATE_KEY`, { target: 'main' });
-            return;
-        }
         await c.start({
-            targetChains: options.chain,
-            nearAccount: process.env.NEAR_ACCOUNT!,
-            // @ts-ignore
-            nearPrivateKey: process.env.NEAR_PRIVATE_KEY!
+            nearAccount: options.nearAccount,
+            nearPrivateKey: options.nearPrivateKey
         });
     });
 
