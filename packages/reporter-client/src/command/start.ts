@@ -186,7 +186,7 @@ export class XAPIExporterStarter {
       return;
     }
 
-    const maxResultLength: number | undefined =
+    const maxResultLength: number =
       // @ts-ignore
       await aggregator.get_max_result_length();
 
@@ -206,7 +206,7 @@ export class XAPIExporterStarter {
         )
       ) {
         logger.info(
-          `you already report this ${todo.requestId} from ${targetChain}, skip this`,
+          `you have already report this ${todo.requestId} from ${targetChain}, skip this`,
           { target: "reporter" },
         );
         return;
@@ -224,17 +224,15 @@ export class XAPIExporterStarter {
         continue;
       }
 
-      const answers = await this.fetchApi(datasources, todo);
-      if (maxResultLength) {
-        for (const answer of answers) {
-          if (!answer.result) {
-            continue;
-          }
-          const resultLength = answer.result.length;
-          if (resultLength > maxResultLength) {
-            answer.result = undefined;
-            answer.error = `the result is too long, maxLength: ${maxResultLength}, currentLength: ${resultLength}`;
-          }
+      const answers = await this.fetchApi(datasources, todo, maxResultLength);
+      for (const answer of answers) {
+        if (!answer.result) {
+          continue;
+        }
+        const resultLength = answer.result.length;
+        if (resultLength > maxResultLength) {
+          answer.result = undefined;
+          answer.error = `the result is too long, maxLength: ${maxResultLength}, currentLength: ${resultLength}`;
         }
       }
 
@@ -286,6 +284,7 @@ export class XAPIExporterStarter {
   private async fetchApi(
     datasources: Datasource[],
     todo: RequestMade,
+    maxResultLength: number,
   ): Promise<Answer[]> {
     const answers: Answer[] = [];
     for (const ds of datasources) {
@@ -356,7 +355,7 @@ export class XAPIExporterStarter {
             data_source_name: ds.name,
             error: Tools.ellipsisText({
               text: e.message ?? e.msg ?? "ERROR_CALL_API",
-              len: 480,
+              len: maxResultLength - 3,
               suffix: "...",
             }),
           });
