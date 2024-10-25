@@ -259,7 +259,10 @@ export class XAPIExporterStarter {
             signerAccount: near.nearAccount(),
             args: report,
             gas: "300000000000000",
-            amount: this._bigIntMin([MAX_REPORTER_DEPOSIT, BigInt(reporteDeposit)]),
+            amount: this._bigIntMin([
+              MAX_REPORTER_DEPOSIT,
+              BigInt(reporteDeposit),
+            ]),
           });
           break;
         } catch (e: any) {
@@ -286,68 +289,79 @@ export class XAPIExporterStarter {
   ): Promise<Answer[]> {
     const answers: Answer[] = [];
     for (const ds of datasources) {
-      try {
-        const headers: Record<string, any> = {};
-        const axiosOptions: any = {
-          responseType: "text",
-          method: ds.method,
-          url: ds.url,
-          headers,
-        };
+      let times = 0;
+      while (true) {
+        times += 1;
+        try {
+          const headers: Record<string, any> = {};
+          const axiosOptions: any = {
+            responseType: "text",
+            method: ds.method,
+            url: ds.url,
+            headers,
+          };
 
-        if (ds.method.toLowerCase() === "get") {
-          const params = this._mergeData(ds.query_json, todo.requestData);
-          axiosOptions.params = params;
-          if (ds.body_json) {
-            axiosOptions.data = ds.body_json;
+          if (ds.method.toLowerCase() === "get") {
+            const params = this._mergeData(ds.query_json, todo.requestData);
+            axiosOptions.params = params;
+            if (ds.body_json) {
+              axiosOptions.data = ds.body_json;
+            }
+          } else {
+            if (ds.query_json) {
+              axiosOptions.params = ds.query_json;
+            }
+            axiosOptions.data = this._mergeData(ds.body_json, todo.requestData);
           }
-        } else {
-          if (ds.query_json) {
-            axiosOptions.params = ds.query_json;
-          }
-          axiosOptions.data = this._mergeData(ds.body_json, todo.requestData);
-        }
 
-        const authValue = this._readAuth(ds.auth.value_path);
-        if (authValue) {
-          const place_path = ds.auth.place_path;
-          if (place_path.indexOf("headers.") === 0) {
-            const headerName = place_path.replace("headers.", "");
-            headers[headerName] = authValue;
-          }
-          if (place_path.indexOf("body.") === 0) {
-            const fieldName = place_path.replace("body.", "");
-            if (!axiosOptions.data) {
-              axiosOptions.data = {};
+          const authValue = this._readAuth(ds.auth.value_path);
+          if (authValue) {
+            const place_path = ds.auth.place_path;
+            if (place_path.indexOf("headers.") === 0) {
+              const headerName = place_path.replace("headers.", "");
+              headers[headerName] = authValue;
             }
-            this._setNestedProperty(axiosOptions.data, fieldName, authValue);
-          }
-          if (place_path.indexOf("query.") === 0) {
-            const queryName = place_path.replace("query.", "");
-            if (!axiosOptions.params) {
-              axiosOptions.params = {};
+            if (place_path.indexOf("body.") === 0) {
+              const fieldName = place_path.replace("body.", "");
+              if (!axiosOptions.data) {
+                axiosOptions.data = {};
+              }
+              this._setNestedProperty(axiosOptions.data, fieldName, authValue);
             }
-            axiosOptions.params[queryName] = authValue;
+            if (place_path.indexOf("query.") === 0) {
+              const queryName = place_path.replace("query.", "");
+              if (!axiosOptions.params) {
+                axiosOptions.params = {};
+              }
+              axiosOptions.params[queryName] = authValue;
+            }
           }
+          const response = await axios(axiosOptions);
+          answers.push({
+            data_source_name: ds.name,
+            result: response.data,
+          });
+          break;
+        } catch (e: any) {
+          logger.warn(
+            `failed call api, times ${times} error: ${e.message || e.msg || e}`,
+            { target: "reporter" },
+          );
+          if (times < 3) {
+            await setTimeout(5000);
+            continue;
+          }
+
+          answers.push({
+            data_source_name: ds.name,
+            error: Tools.ellipsisText({
+              text: e.message ?? e.msg ?? "ERROR_CALL_API",
+              len: 480,
+              suffix: "...",
+            }),
+          });
+          break;
         }
-        const response = await axios(axiosOptions);
-        answers.push({
-          data_source_name: ds.name,
-          result: response.data,
-        });
-      } catch (e: any) {
-        logger.warn(
-          `failed call api, will report error: ${e.message || e.msg || e}`,
-          { target: "reporter" },
-        );
-        answers.push({
-          data_source_name: ds.name,
-          error: Tools.ellipsisText({
-            text: e.message ?? e.msg ?? "ERROR_CALL_API",
-            len: 480,
-            suffix: "...",
-          }),
-        });
       }
     }
     return answers;
