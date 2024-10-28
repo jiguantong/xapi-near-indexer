@@ -259,16 +259,18 @@ export class XAPIExporterStarter {
       );
       if (!includeMyself) {
         logger.debug(
-          `quorum: ${reporterRequired.quorum}, stakeds: ${topStakeds.map(
-            (item) => item.account_id,
-          )}`,
+          `quorum: ${reporterRequired.quorum}, stakeds: [${topStakeds
+            .map((item) => item.account_id)
+            .join(",")}]`,
           {
             target: "reporter",
             breads: [targetChain.code, lifecycle.aggregatorId, todo.requestId],
           },
         );
         logger.info(
-          `you (${chalk.gray(near.accountId)}) are not in stakeds for this request ${todo.requestId}, skip`,
+          `you (${chalk.gray(
+            near.accountId,
+          )}) are not in stakeds for this request ${todo.requestId}, skip`,
           {
             target: "reporter",
             breads: [targetChain.code, lifecycle.aggregatorId, todo.requestId],
