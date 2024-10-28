@@ -173,6 +173,7 @@ export class XAPIExporterStarter {
       await this.nearGraphqlService.queryAggregatedeEvents({
         endpoint: this._nearGraphqlEndpoint,
         ids: waites.map((item) => item.requestId),
+        aggregator: lifecycle.aggregatorId,
       });
 
     const possibleTodos = waites.filter(
