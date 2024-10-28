@@ -25,6 +25,7 @@ import {
 } from "@ringdao/xapi-common";
 import { HelixChain, HelixChainConf } from "@helixbridge/helixconf";
 import { KeyPairString } from "near-api-js/lib/utils";
+import chalk = require("chalk");
 
 export interface BaseStartOptions {}
 
@@ -86,12 +87,21 @@ export class XAPIExporterStarter {
         for (const aggregator of aggregators) {
           for (const supportedChain of aggregator.supported_chains) {
             const chain = HelixChain.get(supportedChain);
-            if (!chain) continue;
-            try {
-              const near = await this.near(options, chain);
-              logger.info(`==== start reporter for ${chain.code} ====`, {
+            if (!chain) {
+              logger.warn(`unknown chain ${supportedChain}, skip`, {
                 target: "reporter",
               });
+              continue;
+            }
+            try {
+              const near = await this.near(options, chain);
+              logger.info(
+                `=== run reporter for [${chalk.magenta(chain.code)}}] ===`,
+                {
+                  target: "reporter",
+                  breads: [chain.code, aggregator.id],
+                },
+              );
               await this.run({
                 ...options,
                 near,
@@ -100,15 +110,16 @@ export class XAPIExporterStarter {
                 minimumReward: options.minimumRewards[chain.code],
               });
             } catch (e: any) {
-              logger.error(`run reporter errored: ${e.stack || e}`, {
+              logger.error(`reporter errored: ${e.stack || e}`, {
                 target: "reporter",
+                breads: [chain.code, aggregator.id],
               });
             }
           }
         }
         await setTimeout(1000);
       } catch (e: any) {
-        logger.error(`failed to start reporter: ${e.stack || e}`, {
+        logger.error(`failed to run reporter: ${e.stack || e}`, {
           target: "reporter",
         });
         await setTimeout(3000);
@@ -139,12 +150,10 @@ export class XAPIExporterStarter {
     // @ts-ignore
     const datasources: Datasource[] = await aggregator.get_data_sources();
     if (!datasources || !datasources.length) {
-      logger.warn(
-        `missing datasource for [${lifecycle.aggregatorId}] skip this`,
-        {
-          target: "reporter",
-        },
-      );
+      logger.warn("missing datasource, skip", {
+        target: "reporter",
+        breads: [targetChain.code, lifecycle.aggregatorId],
+      });
       return;
     }
 
@@ -182,9 +191,19 @@ export class XAPIExporterStarter {
       }
     }
     if (!todos.length) {
-      logger.debug("not have any todo jobs", { target: "report" });
+      logger.info("not have any todo jobs", {
+        target: "report",
+        breads: [targetChain.code, lifecycle.aggregatorId],
+      });
       return;
     }
+    logger.info(
+      `found ${todos.length} todo jobs from ${waites.length} waite jobs`,
+      {
+        target: "reporter",
+        breads: [targetChain.code, lifecycle.aggregatorId],
+      },
+    );
 
     const maxResultLength: number =
       // @ts-ignore
@@ -206,11 +225,21 @@ export class XAPIExporterStarter {
             item.reporter?.toLowerCase() === near.accountId.toLowerCase(),
         )
       ) {
-        logger.info(
-          `you have already report this ${todo.requestId} from ${targetChain}, skip this`,
-          { target: "reporter" },
-        );
+        logger.info(`you have already report ${todo.requestId}, skip`, {
+          target: "reporter",
+          breads: [targetChain.code, lifecycle.aggregatorId, todo.requestId],
+        });
         return;
+      } else {
+        logger.debug(
+          `you have not report ${todo.requestId}, will do it. > ${
+            reports ? reports.map((item) => item) : "none"
+          }`,
+          {
+            target: "reporter",
+            breads: [targetChain.code, lifecycle.aggregatorId, todo.requestId],
+          },
+        );
       }
 
       // @ts-ignore
@@ -222,16 +251,48 @@ export class XAPIExporterStarter {
           item.account_id.toLowerCase() === near.accountId.toLowerCase(),
       );
       if (!includeMyself) {
+        logger.debug(
+          `quorum: ${reporterRequired.quorum}, stakeds: ${topStakeds.map(
+            (item) => item.account_id,
+          )}`,
+          {
+            target: "reporter",
+            breads: [targetChain.code, lifecycle.aggregatorId, todo.requestId],
+          },
+        );
+        logger.info(
+          `you are not in stakeds for this request ${todo.requestId}, skip`,
+          {
+            target: "reporter",
+            breads: [targetChain.code, lifecycle.aggregatorId, todo.requestId],
+          },
+        );
         continue;
       }
 
-      const answers = await this.fetchApi(datasources, todo, maxResultLength);
+      const answers = await this.fetchApi(
+        lifecycle,
+        datasources,
+        todo,
+        maxResultLength,
+      );
       for (const answer of answers) {
         if (!answer.result) {
           continue;
         }
         const resultLength = answer.result.length;
         if (resultLength > maxResultLength) {
+          logger.warn(
+            `answer length ${resultLength} is exceed max result length ${maxResultLength}, refactor error result`,
+            {
+              target: "reporter",
+              breads: [
+                targetChain.code,
+                lifecycle.aggregatorId,
+                todo.requestId,
+              ],
+            },
+          );
           answer.result = undefined;
           answer.error = `the result is too long, maxLength: ${maxResultLength}, currentLength: ${resultLength}`;
         }
@@ -241,7 +302,10 @@ export class XAPIExporterStarter {
       while (true) {
         times += 1;
         if (times > 3) {
-          logger.warn("failed report 3 times, skipp this round.");
+          logger.warn("failed report 3 times, skipp this round.", {
+            target: "reporter",
+            breads: [targetChain.code, lifecycle.aggregatorId, todo.requestId],
+          });
           break;
         }
         try {
@@ -269,20 +333,26 @@ export class XAPIExporterStarter {
             `failed to report: ${e.message || e.msg || e}, times: ${times}`,
             {
               target: "reporter",
+              breads: [
+                targetChain.code,
+                lifecycle.aggregatorId,
+                todo.requestId,
+              ],
             },
           );
           await setTimeout(2000);
         }
       }
-    }
 
-    logger.debug(lifecycle.targetChain.code, {
-      target: "reporter",
-      breads: ["hello", "x"],
-    });
+      logger.info(`report ${todo.requestId} successful`, {
+        target: "reporter",
+        breads: [targetChain.code, lifecycle.aggregatorId, todo.requestId],
+      });
+    }
   }
 
   private async fetchApi(
+    lifecycle: ReporterLifecycle,
     datasources: Datasource[],
     todo: RequestMade,
     maxResultLength: number,
@@ -292,6 +362,14 @@ export class XAPIExporterStarter {
       let times = 0;
       while (true) {
         times += 1;
+        logger.debug(`(${times}) fetch api for ${ds.name}`, {
+          target: "reporter",
+          breads: [
+            lifecycle.targetChain.code,
+            lifecycle.aggregatorId,
+            todo.requestId,
+          ],
+        });
         try {
           const headers: Record<string, any> = {};
           const axiosOptions: any = {
@@ -336,7 +414,39 @@ export class XAPIExporterStarter {
               axiosOptions.params[queryName] = authValue;
             }
           }
+          const envEnableUnsafeRequestInfo =
+            process.env["XAPI_UNSAFE_SHOW_REQUEST_INFO"];
+          if (
+            envEnableUnsafeRequestInfo === "1" ||
+            envEnableUnsafeRequestInfo === "true"
+          ) {
+            logger.debug(JSON.stringify(axiosOptions), {
+              target: "reporter",
+              breads: [
+                lifecycle.targetChain.code,
+                lifecycle.aggregatorId,
+                todo.requestId,
+              ],
+            });
+          } else {
+            logger.debug(`${ds.method.toUpperCase()} ${ds.url}`, {
+              target: "reporter",
+              breads: [
+                lifecycle.targetChain.code,
+                lifecycle.aggregatorId,
+                todo.requestId,
+              ],
+            });
+          }
           const response = await axios(axiosOptions);
+          logger.debug(`response of ${todo.requestId}: ${response.data}`, {
+            target: "reporter",
+            breads: [
+              lifecycle.targetChain.code,
+              lifecycle.aggregatorId,
+              todo.requestId,
+            ],
+          });
           answers.push({
             data_source_name: ds.name,
             result: response.data,
@@ -345,13 +455,33 @@ export class XAPIExporterStarter {
         } catch (e: any) {
           logger.warn(
             `failed call api, times ${times} error: ${e.message || e.msg || e}`,
-            { target: "reporter" },
+            {
+              target: "reporter",
+              breads: [
+                lifecycle.targetChain.code,
+                lifecycle.aggregatorId,
+                todo.requestId,
+              ],
+            },
           );
           if (times < 3) {
             await setTimeout(5000);
             continue;
           }
 
+          logger.warn(
+            `failed to call api ${ds.method.toUpperCase()} ${
+              ds.url
+            } many times.`,
+            {
+              target: "reporter",
+              breads: [
+                lifecycle.targetChain.code,
+                lifecycle.aggregatorId,
+                todo.requestId,
+              ],
+            },
+          );
           answers.push({
             data_source_name: ds.name,
             error: Tools.ellipsisText({
