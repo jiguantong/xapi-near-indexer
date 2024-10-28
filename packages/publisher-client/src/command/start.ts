@@ -146,6 +146,7 @@ export class PublisherStarter {
             await this.nearGraphqlService.queryAggregatedeEvents({
                 endpoint: XAPIConfig.graphql.endpoint('near'),
                 ids: nonfulfilled.map((item) => item.requestId),
+                aggregator: lifecycle.aggregator
             });
         const toPublishIds = aggregatedEvents.map(a => a.request_id);
         logger.info(`==> ${lifecycle.aggregator} [${targetChain.name}-${targetChain.id.toString()}] toPublishIds: [${toPublishIds.length}]`, {
