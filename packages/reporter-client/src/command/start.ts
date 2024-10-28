@@ -198,7 +198,7 @@ export class XAPIExporterStarter {
       return;
     }
     logger.info(
-      `found ${todos.length} todo jobs from ${waites.length} waite jobs`,
+      `found ${todos.length} todo jobs from ${waites.length} wait jobs`,
       {
         target: "reporter",
         breads: [targetChain.code, lifecycle.aggregatorId],
