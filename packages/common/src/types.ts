@@ -51,8 +51,9 @@ export interface Datasource {
   result_path: ResultPathString;
   url: string;
   auth: DatasourceAuth;
-  body_json: string;
-  query_json: string;
+  body_json?: any;
+  query_json?: any;
+  headers?: Record<string, any>;
 }
 
 export interface DatasourceAuth {

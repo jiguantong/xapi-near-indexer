@@ -281,6 +281,7 @@ export class XAPIExporterStarter {
         todo,
         maxResultLength,
       );
+      // check result length
       for (const answer of answers) {
         if (!answer.result) {
           continue;
@@ -322,6 +323,10 @@ export class XAPIExporterStarter {
           const reporteDeposit =
             // @ts-ignore
             await aggregator.estimate_storage_deposit(report);
+          logger.info(`estimated storage deposit: ${reporteDeposit}`, {
+            target: "reporter",
+            breads: [targetChain.code, lifecycle.aggregatorId, todo.requestId],
+          });
           // @ts-ignore
           const _reported = await aggregator.report({
             signerAccount: near.nearAccount(),
@@ -332,9 +337,14 @@ export class XAPIExporterStarter {
               BigInt(reporteDeposit),
             ]),
           });
+
+          logger.info(`report successful`, {
+            target: "reporter",
+            breads: [targetChain.code, lifecycle.aggregatorId, todo.requestId],
+          });
           break;
         } catch (e: any) {
-          logger.warning(
+          logger.warn(
             `failed to report: ${e.message || e.msg || e}, times: ${times}`,
             {
               target: "reporter",
@@ -348,11 +358,6 @@ export class XAPIExporterStarter {
           await setTimeout(2000);
         }
       }
-
-      logger.info(`report successful`, {
-        target: "reporter",
-        breads: [targetChain.code, lifecycle.aggregatorId, todo.requestId],
-      });
     }
   }
 
@@ -364,10 +369,23 @@ export class XAPIExporterStarter {
   ): Promise<Answer[]> {
     const answers: Answer[] = [];
     for (const ds of datasources) {
+      logger.debug(
+        `datasource: ${JSON.stringify(ds)} and request data is: ${
+          todo.requestData
+        }`,
+        {
+          target: "reporter",
+          breads: [
+            lifecycle.targetChain.code,
+            lifecycle.aggregatorId,
+            todo.requestId,
+          ],
+        },
+      );
       let times = 0;
       while (true) {
         times += 1;
-        logger.debug(`(${times}) fetch api for ${ds.name}`, {
+        logger.info(`(${times}) fetch api for ${ds.name}`, {
           target: "reporter",
           breads: [
             lifecycle.targetChain.code,
@@ -383,10 +401,21 @@ export class XAPIExporterStarter {
             url: ds.url,
             headers,
           };
-
+          if (ds.headers) {
+            for (const key of Object.keys(ds.headers)) {
+              headers[key] = ds.headers[key];
+            }
+          }
           if (ds.method.toLowerCase() === "get") {
-            const params = this._mergeData(lifecycle, todo, ds.query_json, todo.requestData);
-            axiosOptions.params = params;
+            if (ds.query_json) {
+              const params = this._mergeData(
+                lifecycle,
+                todo,
+                ds.query_json,
+                todo.requestData,
+              );
+              axiosOptions.params = params;
+            }
             if (ds.body_json) {
               axiosOptions.data = ds.body_json;
             }
@@ -394,7 +423,14 @@ export class XAPIExporterStarter {
             if (ds.query_json) {
               axiosOptions.params = ds.query_json;
             }
-            axiosOptions.data = this._mergeData(lifecycle, todo, ds.body_json, todo.requestData);
+            if (ds.body_json) {
+              axiosOptions.data = this._mergeData(
+                lifecycle,
+                todo,
+                ds.body_json,
+                todo.requestData,
+              );
+            }
           }
 
           const authValue = this._readAuth(ds.auth.value_path);
@@ -425,7 +461,7 @@ export class XAPIExporterStarter {
             envEnableUnsafeRequestInfo === "1" ||
             envEnableUnsafeRequestInfo === "true"
           ) {
-            logger.debug(JSON.stringify(axiosOptions), {
+            logger.info(JSON.stringify(axiosOptions), {
               target: "reporter",
               breads: [
                 lifecycle.targetChain.code,
@@ -434,7 +470,7 @@ export class XAPIExporterStarter {
               ],
             });
           } else {
-            logger.debug(`${ds.method.toUpperCase()} ${ds.url}`, {
+            logger.info(`${ds.method.toUpperCase()} ${ds.url}`, {
               target: "reporter",
               breads: [
                 lifecycle.targetChain.code,
@@ -444,7 +480,11 @@ export class XAPIExporterStarter {
             });
           }
           const response = await axios(axiosOptions);
-          logger.debug(`response of ${todo.requestId}: ${response.data}`, {
+          const result =
+            typeof response.data === "string"
+              ? response.data
+              : JSON.stringify(response.data);
+          logger.info(`response: ${result}`, {
             target: "reporter",
             breads: [
               lifecycle.targetChain.code,
@@ -454,7 +494,7 @@ export class XAPIExporterStarter {
           });
           answers.push({
             data_source_name: ds.name,
-            result: response.data,
+            result,
           });
           break;
         } catch (e: any) {
@@ -514,7 +554,7 @@ export class XAPIExporterStarter {
   private _mergeData(
     lifecycle: ReporterLifecycle,
     todo: RequestMade,
-    first: string,
+    first: any,
     second: string,
   ): any | undefined {
     let fv = first,
@@ -525,7 +565,6 @@ export class XAPIExporterStarter {
       } catch (ignore: any) {
         logger.warn(
           `failed to parse data from datasource: ${ignore} will use raw value`,
-
           {
             target: "reporter",
             breads: [
@@ -542,7 +581,6 @@ export class XAPIExporterStarter {
     } catch (ignore: any) {
       logger.warn(
         `failed to parse data from request made: ${ignore} will use raw value`,
-
         {
           target: "reporter",
           breads: [
