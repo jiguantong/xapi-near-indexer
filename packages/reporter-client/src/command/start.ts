@@ -196,10 +196,11 @@ export class XAPIExporterStarter {
     );
     for (const todo of todos) {
       // @ts-ignore
-      const reports: Report[] = aggregator.get_reports({
+      const reports: Report[] | undefined = await aggregator.get_reports({
         request_id: todo.requestId,
       });
       if (
+        reports &&
         reports.find(
           (item) =>
             item.reporter?.toLowerCase() === near.accountId.toLowerCase(),

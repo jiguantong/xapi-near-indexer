@@ -71,3 +71,8 @@ process.on("uncaughtException", (error) => {
     target: "reporter",
   });
 });
+
+const envEnableRewriteConsole = process.env.XAPI_REWRITE_CONSOLE;
+if (envEnableRewriteConsole === '1' || envEnableRewriteConsole === 'true') {
+  console.log = function () { return; };
+}
