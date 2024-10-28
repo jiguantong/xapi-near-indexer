@@ -16,6 +16,7 @@ program
   .requiredOption(
     "--reward-address <char>",
     "reward address (target chain address)",
+    process.env["XAPI_REWARD_ADDRESS"],
   )
   .requiredOption(
     "--near-account <char>",
