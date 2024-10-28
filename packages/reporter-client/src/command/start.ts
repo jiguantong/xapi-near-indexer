@@ -226,9 +226,9 @@ export class XAPIExporterStarter {
         )
       ) {
         logger.info(
-          `you (${chalk.gray(near.accountId)}) have already report ${
-            todo.requestId
-          }, skip`,
+          `you (${chalk.gray(
+            near.accountId,
+          )}) have already report this request, skip`,
           {
             target: "reporter",
             breads: [targetChain.code, lifecycle.aggregatorId, todo.requestId],
@@ -237,9 +237,9 @@ export class XAPIExporterStarter {
         return;
       } else {
         logger.debug(
-          `you (${chalk.gray(near.accountId)}) have not report ${
-            todo.requestId
-          }, will do it. reports > ${
+          `you (${chalk.gray(
+            near.accountId,
+          )}) have not report this request, will do it. reports > ${
             reports ? reports.map((item) => item) : "none"
           }`,
           {
@@ -261,7 +261,9 @@ export class XAPIExporterStarter {
         logger.info(
           `you (${chalk.gray(
             near.accountId,
-          )}) are not in stakeds for this request ${todo.requestId}, {quorum: ${reporterRequired.quorum}, stakeds: [${topStakeds
+          )}) are not in stakeds for this request, {quorum: ${
+            reporterRequired.quorum
+          }, stakeds: [${topStakeds
             .map((item) => item.account_id)
             .join(",")}]} skip`,
           {
@@ -346,7 +348,7 @@ export class XAPIExporterStarter {
         }
       }
 
-      logger.info(`report ${todo.requestId} successful`, {
+      logger.info(`report successful`, {
         target: "reporter",
         breads: [targetChain.code, lifecycle.aggregatorId, todo.requestId],
       });
@@ -382,7 +384,7 @@ export class XAPIExporterStarter {
           };
 
           if (ds.method.toLowerCase() === "get") {
-            const params = this._mergeData(ds.query_json, todo.requestData);
+            const params = this._mergeData(lifecycle, todo, ds.query_json, todo.requestData);
             axiosOptions.params = params;
             if (ds.body_json) {
               axiosOptions.data = ds.body_json;
@@ -391,7 +393,7 @@ export class XAPIExporterStarter {
             if (ds.query_json) {
               axiosOptions.params = ds.query_json;
             }
-            axiosOptions.data = this._mergeData(ds.body_json, todo.requestData);
+            axiosOptions.data = this._mergeData(lifecycle, todo, ds.body_json, todo.requestData);
           }
 
           const authValue = this._readAuth(ds.auth.value_path);
@@ -508,7 +510,12 @@ export class XAPIExporterStarter {
     return undefined;
   }
 
-  private _mergeData(first: string, second: string): any | undefined {
+  private _mergeData(
+    lifecycle: ReporterLifecycle,
+    todo: RequestMade,
+    first: string,
+    second: string,
+  ): any | undefined {
     let fv = first,
       sv = second;
     if (typeof fv === "string") {
@@ -517,7 +524,15 @@ export class XAPIExporterStarter {
       } catch (ignore: any) {
         logger.warn(
           `failed to parse data from datasource: ${ignore} will use raw value`,
-          { target: "reporter" },
+
+          {
+            target: "reporter",
+            breads: [
+              lifecycle.targetChain.code,
+              lifecycle.aggregatorId,
+              todo.requestId,
+            ],
+          },
         );
       }
     }
@@ -526,7 +541,15 @@ export class XAPIExporterStarter {
     } catch (ignore: any) {
       logger.warn(
         `failed to parse data from request made: ${ignore} will use raw value`,
-        { target: "reporter" },
+
+        {
+          target: "reporter",
+          breads: [
+            lifecycle.targetChain.code,
+            lifecycle.aggregatorId,
+            todo.requestId,
+          ],
+        },
       );
     }
     const tfv = typeof fv;
