@@ -148,8 +148,11 @@ export class PublisherStarter {
                 ids: nonfulfilled.map((item) => item.requestId),
             });
         const toPublishIds = aggregatedEvents.map(a => a.request_id);
-        logger.info(`==> ${lifecycle.aggregator} [${targetChain.name}-${targetChain.id.toString()}] toPublishIds: [${toPublishIds.length}], ${toPublishIds}`, {
+        logger.info(`==> ${lifecycle.aggregator} [${targetChain.name}-${targetChain.id.toString()}] toPublishIds: [${toPublishIds.length}]`, {
             target: "publisher",
+        });
+        logger.debug(`==> ${lifecycle.aggregator} [${targetChain.name}-${targetChain.id.toString()}] toPublishIds: ${toPublishIds}`, {
+            target: "publisher"
         });
         // 3. Check request status on xapi contract
         for (const aggregated of aggregatedEvents) {
