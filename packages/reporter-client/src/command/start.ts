@@ -225,14 +225,21 @@ export class XAPIExporterStarter {
             item.reporter?.toLowerCase() === near.accountId.toLowerCase(),
         )
       ) {
-        logger.info(`you have already report ${todo.requestId}, skip`, {
-          target: "reporter",
-          breads: [targetChain.code, lifecycle.aggregatorId, todo.requestId],
-        });
+        logger.info(
+          `you (${chalk.gray(near.accountId)}) have already report ${
+            todo.requestId
+          }, skip`,
+          {
+            target: "reporter",
+            breads: [targetChain.code, lifecycle.aggregatorId, todo.requestId],
+          },
+        );
         return;
       } else {
         logger.debug(
-          `you have not report ${todo.requestId}, will do it. > ${
+          `you (${chalk.gray(near.accountId)}) have not report ${
+            todo.requestId
+          }, will do it. reports > ${
             reports ? reports.map((item) => item) : "none"
           }`,
           {
@@ -261,7 +268,7 @@ export class XAPIExporterStarter {
           },
         );
         logger.info(
-          `you are not in stakeds for this request ${todo.requestId}, skip`,
+          `you (${chalk.gray(near.accountId)}) are not in stakeds for this request ${todo.requestId}, skip`,
           {
             target: "reporter",
             breads: [targetChain.code, lifecycle.aggregatorId, todo.requestId],
