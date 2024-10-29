@@ -224,7 +224,12 @@ function parseResponse(eventData: TypedMap<string, JSONValue>, nanoId: string, r
   response.started_at = BigInt.fromString(eventData.mustGet("started_at").toString());
   response.updated_at = BigInt.fromString(eventData.mustGet("updated_at").toString());
   response.status = eventData.mustGet("status").toString();
-  response.result = eventData.mustGet("result").toString();
+  const maybeResult = eventData.get("result");
+  if (maybeResult) {
+    response.result = eventData.mustGet("result").toString();
+  } else {
+    response.result = "-";
+  }
   response.chain_id = BigInt.fromString(eventData.mustGet("chain_id").toString());
   response.aggregator = receipt.receiverId;
   response.error_code = eventData.get("error_code") ? eventData.mustGet("error_code").toI64() as i32 : 0;
@@ -240,7 +245,12 @@ function parseAggregated(eventData: TypedMap<string, JSONValue>, nanoId: string,
   aggregatedEvent.started_at = BigInt.fromString(eventData.mustGet("started_at").toString());
   aggregatedEvent.updated_at = BigInt.fromString(eventData.mustGet("updated_at").toString());
   aggregatedEvent.status = eventData.mustGet("status").toString();
-  aggregatedEvent.result = eventData.mustGet("result").toString();
+  const maybeResult = eventData.get("result");
+  if (maybeResult) {
+    aggregatedEvent.result = eventData.mustGet("result").toString();
+  } else {
+    aggregatedEvent.result = "-";
+  }
   aggregatedEvent.chain_id = BigInt.fromString(eventData.mustGet("chain_id").toString());
   aggregatedEvent.aggregator = receipt.receiverId;
   aggregatedEvent.error_code = eventData.get("error_code") ? eventData.mustGet("error_code").toI64() as i32 : 0;
