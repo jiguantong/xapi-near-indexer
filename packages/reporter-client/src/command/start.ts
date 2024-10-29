@@ -285,7 +285,7 @@ export class XAPIExporterStarter {
       // check result length
       for (const answer of answers) {
         if (!answer.result) {
-          answer.result = "-";
+          answer.result = "";
           continue;
         }
         const resultLength = answer.result.length;
@@ -301,7 +301,7 @@ export class XAPIExporterStarter {
               ],
             },
           );
-          answer.result = "-";
+          answer.result = "";
           answer.error = `the result is too long, maxLength: ${maxResultLength}, currentLength: ${resultLength}`;
         }
       }
