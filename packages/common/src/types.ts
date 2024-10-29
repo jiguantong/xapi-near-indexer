@@ -48,7 +48,7 @@ export type AuthValuePathString = `env.${string}`;
 export interface Datasource {
   method: string;
   name: string;
-  result_path: ResultPathString;
+  result_path?: ResultPathString;
   url: string;
   auth: DatasourceAuth;
   body_json?: any;

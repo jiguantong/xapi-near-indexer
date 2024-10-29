@@ -285,6 +285,7 @@ export class XAPIExporterStarter {
       // check result length
       for (const answer of answers) {
         if (!answer.result) {
+          answer.result = "-";
           continue;
         }
         const resultLength = answer.result.length;
@@ -300,7 +301,7 @@ export class XAPIExporterStarter {
               ],
             },
           );
-          answer.result = '';
+          answer.result = "-";
           answer.error = `the result is too long, maxLength: ${maxResultLength}, currentLength: ${resultLength}`;
         }
       }
@@ -481,10 +482,16 @@ export class XAPIExporterStarter {
             });
           }
           const response = await axios(axiosOptions);
-          const result =
-            typeof response.data === "string"
-              ? response.data
-              : JSON.stringify(response.data);
+          const respData = response.data;
+          let result;
+          if (typeof respData === "string") {
+            result = respData;
+          } else {
+            const extractedValue = ds.result_path
+              ? this._extractValue(respData, ds.result_path)
+              : respData;
+            result = JSON.stringify(extractedValue);
+          }
           logger.info(`response: ${result}`, {
             target: "reporter",
             breads: [
@@ -660,6 +667,16 @@ export class XAPIExporterStarter {
         }
       }
     });
+  }
+
+  private _extractValue(obj: any, path: string): any {
+    const keys = path.replace(/\[(\w+)\]/g, ".$1").split(".");
+    return keys.reduce((acc, key) => {
+      if (acc && key in acc) {
+        return acc[key];
+      }
+      return undefined;
+    }, obj);
   }
 
   private _bigIntMin(args: any[]) {
