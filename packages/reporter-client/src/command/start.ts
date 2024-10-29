@@ -90,6 +90,7 @@ export class XAPIExporterStarter {
             if (!chain) {
               logger.warn(`unknown chain ${supportedChain}, skip`, {
                 target: "reporter",
+                breads: [supportedChain],
               });
               continue;
             }
@@ -193,7 +194,7 @@ export class XAPIExporterStarter {
     }
     if (!todos.length) {
       logger.info("not have any todo jobs", {
-        target: "report",
+        target: "reporter",
         breads: [targetChain.code, lifecycle.aggregatorId],
       });
       return;
@@ -299,7 +300,7 @@ export class XAPIExporterStarter {
               ],
             },
           );
-          answer.result = undefined;
+          answer.result = '';
           answer.error = `the result is too long, maxLength: ${maxResultLength}, currentLength: ${resultLength}`;
         }
       }
