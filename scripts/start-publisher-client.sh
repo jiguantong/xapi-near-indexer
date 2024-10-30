@@ -12,6 +12,6 @@ npm run build:offchain
 
 cd ${WORK_PATH}/packages/publisher-client
 
-export XPI_LOG_LEVEL=debug
+# export XPI_LOG_LEVEL=info
 
 node dist/main.js $@
