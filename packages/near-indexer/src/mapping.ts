@@ -228,7 +228,7 @@ function parseResponse(eventData: TypedMap<string, JSONValue>, nanoId: string, r
   if (maybeResult) {
     response.result = eventData.mustGet("result").toString();
   } else {
-    response.result = "-";
+    response.result = "";
   }
   response.chain_id = BigInt.fromString(eventData.mustGet("chain_id").toString());
   response.aggregator = receipt.receiverId;
@@ -249,7 +249,7 @@ function parseAggregated(eventData: TypedMap<string, JSONValue>, nanoId: string,
   if (maybeResult) {
     aggregatedEvent.result = eventData.mustGet("result").toString();
   } else {
-    aggregatedEvent.result = "-";
+    aggregatedEvent.result = "";
   }
   aggregatedEvent.chain_id = BigInt.fromString(eventData.mustGet("chain_id").toString());
   aggregatedEvent.aggregator = receipt.receiverId;
