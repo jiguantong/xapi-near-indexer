@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 
-import { Command } from 'commander';
+import { Command, Option } from 'commander';
 import { Container } from 'typedi';
 import { PublisherStarter } from './command/start';
 import { logger } from "@ringdao/xapi-common";
@@ -15,17 +15,23 @@ program
 program
     .command("start")
     .description("start XAPI Publisher")
-    .requiredOption(
-        "--near-account <char>",
+    .addOption(new Option(
+        "--near-account <string>",
         "near account",
-        process.env["XAPI_NEAR_ACCOUNT"],
-    )
-    .requiredOption(
-        "--near-private-key <char>",
+    ).env("XAPI_NEAR_ACCOUNT"))
+    .addOption(new Option(
+        "--near-private-key <string>",
         "near private key",
-        process.env["XAPI_NEAR_PRIVATE_KEY"],
-    )
+    ).env("XAPI_NEAR_PRIVATE_KEY"))
     .action(async (options) => {
+        if (!options.nearAccount) {
+            logger.error('missing near account, please add --near-account or set env.XAPI_NEAR_ACCOUNT');
+            process.exit(1);
+        }
+        if (!options.nearPrivateKey) {
+            logger.error('missing near private key, please add --near-private-key or set env.XAPI_NEAR_PRIVATE_KEY');
+            process.exit(1);
+        }
         const c = Container.get(PublisherStarter);
         await c.start({
             nearAccount: options.nearAccount,
