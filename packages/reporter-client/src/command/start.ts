@@ -316,19 +316,27 @@ export class XAPIExporterStarter {
           });
           break;
         }
+        const report: Report = {
+          request_id: todo.requestId,
+          reward_address: lifecycle.rewardAddress,
+          answers,
+        };
+        let reporteDeposit;
         try {
-          const report: Report = {
-            request_id: todo.requestId,
-            reward_address: lifecycle.rewardAddress,
-            answers,
-          };
-          const reporteDeposit =
-            // @ts-ignore
-            await aggregator.estimate_storage_deposit(report);
+          // @ts-ignore
+          reporteDeposit = await aggregator.estimate_storage_deposit(report);
           logger.info(`estimated storage deposit: ${reporteDeposit}`, {
             target: "reporter",
             breads: [targetChain.code, lifecycle.aggregatorId, todo.requestId],
           });
+        } catch (e: any) {
+          logger.error(`failed to estimate storage deposit`, {
+            target: "reporter",
+            breads: [targetChain.code, lifecycle.aggregatorId, todo.requestId],
+          });
+          continue;
+        }
+        try {
           // @ts-ignore
           const _reported = await aggregator.report({
             signerAccount: near.nearAccount(),
@@ -346,17 +354,25 @@ export class XAPIExporterStarter {
           });
           break;
         } catch (e: any) {
-          logger.warn(
-            `failed to report: ${e.message || e.msg || e}, times: ${times}`,
-            {
-              target: "reporter",
-              breads: [
-                targetChain.code,
-                lifecycle.aggregatorId,
-                todo.requestId,
-              ],
-            },
-          );
+          const msg = e.message || e.msg || e.toString();
+          if (msg.indexOf("assertion") >= -1) {
+            logger.info(
+              "report successful, but the requirements have not yet been met and we need to wait for enough other reports to be aggregated.",
+              {
+                target: "reporter",
+                breads: [
+                  targetChain.code,
+                  lifecycle.aggregatorId,
+                  todo.requestId,
+                ],
+              },
+            );
+            break;
+          }
+          logger.warn(`failed to report: ${msg}, times: ${times}`, {
+            target: "reporter",
+            breads: [targetChain.code, lifecycle.aggregatorId, todo.requestId],
+          });
           await setTimeout(2000);
         }
       }
