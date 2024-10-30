@@ -119,6 +119,7 @@ export class XAPIExporterStarter {
                 breads: [chain.code, aggregator.id],
               });
             }
+            await setTimeout(1000);
           }
         }
         await setTimeout(5000);
