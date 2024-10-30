@@ -23,6 +23,14 @@ program
       false,
     )
     .action(async (options) => {
+        if (!options.nearAccount) {
+          logger.error('missing near account, please add --near-account or set env.XAPI_NEAR_ACCOUNT');
+          process.exit(1);
+        }
+        if (!options.nearPrivateKey) {
+          logger.error('missing near account, please add --near-private-key or set env.XAPI_NEAR_PRIVATE_KEY');
+          process.exit(1);
+        }
         const c = Container.get(PublisherStarter);
         await c.start({
             nearAccount: options.nearAccount,
