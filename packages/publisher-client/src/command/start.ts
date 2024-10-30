@@ -28,6 +28,7 @@ const MINIMUM_AGGREGATOR_NEAR = new Decimal(1);
 export interface StartOptions {
     nearAccount: string,
     nearPrivateKey: KeyPairString,
+    testnet: boolean,
 }
 
 export interface PublisherLifecycle extends StartOptions {
@@ -41,6 +42,8 @@ export interface PublisherLifecycle extends StartOptions {
 @Service()
 export class PublisherStarter {
     private _nearInstance: Record<string, NearI> = {};
+
+    private _nearGraphqlEndpoint?: string;
 
     constructor(
         private evmGraphqlService: EvmGraphqlService,
@@ -72,12 +75,14 @@ export class PublisherStarter {
     private nearEthereumMap: Record<string, NearEthereum> = {};
 
     async start(options: StartOptions) {
+      this._nearGraphqlEndpoint = XAPIConfig.graphql.endpoint(options.testnet ? "near-testnet" : "near");
+
         const publisherCache = new PublisherStorage(`${homedir}/.xapi-publisher/`);
         while (true) {
             let allAggregators: Aggregator[] = [];
             try {
                 allAggregators = await this.nearGraphqlService.queryAllAggregators({
-                    endpoint: XAPIConfig.graphql.endpoint('near'),
+                    endpoint: this._nearGraphqlEndpoint!,
                 });
             } catch (e) {
                 // @ts-ignore
@@ -156,7 +161,7 @@ export class PublisherStarter {
         // 2. Fetch aggregated events for nonfulfilled requests
         const aggregatedEvents =
             await this.nearGraphqlService.queryAggregatedeEvents({
-                endpoint: XAPIConfig.graphql.endpoint('near'),
+                endpoint: this._nearGraphqlEndpoint!,
                 ids: nonfulfilled.map((item) => item.requestId),
                 aggregator: lifecycle.aggregator
             });
@@ -200,7 +205,7 @@ export class PublisherStarter {
         // 1. Fetch latest SetPublishChainConfigEvent from near indexer for chainid
         const latestConfigFromNear =
             await this.nearGraphqlService.queryLatestPublishConfig({
-                endpoint: XAPIConfig.graphql.endpoint('near'),
+                endpoint: this._nearGraphqlEndpoint!,
                 chainId: lifecycle.targetChain.id.toString(),
                 aggregator: lifecycle.aggregator
             });
@@ -317,7 +322,7 @@ export class PublisherStarter {
                 await setTimeout(5000);
                 result =
                     await this.nearGraphqlService.queryPublishSignature({
-                        endpoint: XAPIConfig.graphql.endpoint('near'),
+                        endpoint: this._nearGraphqlEndpoint!,
                         requestId: relatedRequest.requestId,
                         aggregator: lifecycle.aggregator
                     });
@@ -425,7 +430,7 @@ export class PublisherStarter {
                 await setTimeout(5000);
                 result =
                     await this.nearGraphqlService.querySyncConfigSignature({
-                        endpoint: XAPIConfig.graphql.endpoint('near'),
+                        endpoint: this._nearGraphqlEndpoint!,
                         chainId: lifecycle.targetChain.id.toString(),
                         version: publishChainConfig.version,
                         aggregator: lifecycle.aggregator
