@@ -121,12 +121,12 @@ export class XAPIExporterStarter {
             }
           }
         }
-        await setTimeout(1000);
+        await setTimeout(5000);
       } catch (e: any) {
-        logger.error(`failed to run reporter: ${e.stack || e}`, {
+        logger.error(`failed to run reporter: ${e.stack || e} wait 30s run again`, {
           target: "reporter",
         });
-        await setTimeout(3000);
+        await setTimeout(1000 * 30);
       }
     }
   }
