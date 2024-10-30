@@ -67,3 +67,4 @@ out
 
 *.local.*
 *.tsbuildinfo
+.latest.json

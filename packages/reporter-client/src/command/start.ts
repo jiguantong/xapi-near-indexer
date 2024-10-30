@@ -25,6 +25,7 @@ import {
 } from "@ringdao/xapi-common";
 import { HelixChain, HelixChainConf } from "@helixbridge/helixconf";
 import { KeyPairString } from "near-api-js/lib/utils";
+import chalk = require("chalk");
 
 export interface BaseStartOptions {}
 
@@ -33,6 +34,7 @@ export interface StartOptions extends BaseStartOptions {
   nearAccount: string;
   nearPrivateKey: KeyPairString;
   minimumRewards: Record<string, bigint>;
+  testnet: boolean;
 }
 
 export interface ReporterLifecycle extends StartOptions {
@@ -48,8 +50,8 @@ const MAX_REPORTER_DEPOSIT = 100000000000000000000000n;
 export class XAPIExporterStarter {
   private _nearInstance: Record<string, NearI> = {};
   private _aggregatorStakingMap: Record<string, string> = {};
-  private readonly _nearGraphqlEndpoint: string =
-    XAPIConfig.graphql.endpoint("near");
+
+  private _nearGraphqlEndpoint?: string;
 
   constructor(
     private evmGraphqlService: EvmGraphqlService,
@@ -77,21 +79,33 @@ export class XAPIExporterStarter {
   }
 
   async start(options: StartOptions) {
+    this._nearGraphqlEndpoint = XAPIConfig.graphql.endpoint(options.testnet ? "near-testnet" : "near");
+
     while (true) {
       try {
         const aggregators = await this.nearGraphqlService.queryAggregators({
-          endpoint: this._nearGraphqlEndpoint,
+          endpoint: this._nearGraphqlEndpoint!,
         });
 
         for (const aggregator of aggregators) {
           for (const supportedChain of aggregator.supported_chains) {
             const chain = HelixChain.get(supportedChain);
-            if (!chain) continue;
+            if (!chain) {
+              logger.warn(`unknown chain ${supportedChain}, skip`, {
+                target: "reporter",
+                breads: [supportedChain],
+              });
+              continue;
+            }
             try {
               const near = await this.near(options, chain);
-              logger.info(`==== start reporter for ${chain.code} ====`, {
-                target: "reporter",
-              });
+              logger.info(
+                `=== run reporter for [${chalk.magenta(chain.code)}}] ===`,
+                {
+                  target: "reporter",
+                  breads: [chain.code, aggregator.id],
+                },
+              );
               await this.run({
                 ...options,
                 near,
@@ -100,18 +114,20 @@ export class XAPIExporterStarter {
                 minimumReward: options.minimumRewards[chain.code],
               });
             } catch (e: any) {
-              logger.error(`run reporter errored: ${e.stack || e}`, {
+              logger.error(`reporter errored: ${e.stack || e}`, {
                 target: "reporter",
+                breads: [chain.code, aggregator.id],
               });
             }
+            await setTimeout(1000);
           }
         }
-        await setTimeout(1000);
+        await setTimeout(5000);
       } catch (e: any) {
-        logger.error(`failed to start reporter: ${e.stack || e}`, {
+        logger.error(`failed to run reporter: ${e.stack || e} wait 30s run again`, {
           target: "reporter",
         });
-        await setTimeout(3000);
+        await setTimeout(1000 * 30);
       }
     }
   }
@@ -139,12 +155,10 @@ export class XAPIExporterStarter {
     // @ts-ignore
     const datasources: Datasource[] = await aggregator.get_data_sources();
     if (!datasources || !datasources.length) {
-      logger.warn(
-        `missing datasource for [${lifecycle.aggregatorId}] skip this`,
-        {
-          target: "reporter",
-        },
-      );
+      logger.warn("missing datasource, skip", {
+        target: "reporter",
+        breads: [targetChain.code, lifecycle.aggregatorId],
+      });
       return;
     }
 
@@ -162,8 +176,9 @@ export class XAPIExporterStarter {
 
     const aggregatedEvents =
       await this.nearGraphqlService.queryAggregatedeEvents({
-        endpoint: this._nearGraphqlEndpoint,
+        endpoint: this._nearGraphqlEndpoint!,
         ids: waites.map((item) => item.requestId),
+        aggregator: lifecycle.aggregatorId,
       });
 
     const possibleTodos = waites.filter(
@@ -182,9 +197,19 @@ export class XAPIExporterStarter {
       }
     }
     if (!todos.length) {
-      logger.debug("not have any todo jobs", { target: "report" });
+      logger.info("not have any todo jobs", {
+        target: "reporter",
+        breads: [targetChain.code, lifecycle.aggregatorId],
+      });
       return;
     }
+    logger.info(
+      `found ${todos.length} todo jobs from ${waites.length} wait jobs`,
+      {
+        target: "reporter",
+        breads: [targetChain.code, lifecycle.aggregatorId],
+      },
+    );
 
     const maxResultLength: number =
       // @ts-ignore
@@ -196,20 +221,38 @@ export class XAPIExporterStarter {
     );
     for (const todo of todos) {
       // @ts-ignore
-      const reports: Report[] = aggregator.get_reports({
+      const reports: Report[] | undefined = await aggregator.get_reports({
         request_id: todo.requestId,
       });
       if (
+        reports &&
         reports.find(
           (item) =>
             item.reporter?.toLowerCase() === near.accountId.toLowerCase(),
         )
       ) {
         logger.info(
-          `you have already report this ${todo.requestId} from ${targetChain}, skip this`,
-          { target: "reporter" },
+          `you (${chalk.gray(
+            near.accountId,
+          )}) have already report this request, skip`,
+          {
+            target: "reporter",
+            breads: [targetChain.code, lifecycle.aggregatorId, todo.requestId],
+          },
         );
         return;
+      } else {
+        logger.debug(
+          `you (${chalk.gray(
+            near.accountId,
+          )}) have not report this request, will do it. reports > ${
+            reports ? reports.map((item) => item) : "none"
+          }`,
+          {
+            target: "reporter",
+            breads: [targetChain.code, lifecycle.aggregatorId, todo.requestId],
+          },
+        );
       }
 
       // @ts-ignore
@@ -221,17 +264,48 @@ export class XAPIExporterStarter {
           item.account_id.toLowerCase() === near.accountId.toLowerCase(),
       );
       if (!includeMyself) {
+        logger.info(
+          `you (${chalk.gray(
+            near.accountId,
+          )}) are not in stakeds for this request, {quorum: ${
+            reporterRequired.quorum
+          }, stakeds: [${topStakeds
+            .map((item) => item.account_id)
+            .join(",")}]} skip`,
+          {
+            target: "reporter",
+            breads: [targetChain.code, lifecycle.aggregatorId, todo.requestId],
+          },
+        );
         continue;
       }
 
-      const answers = await this.fetchApi(datasources, todo, maxResultLength);
+      const answers = await this.fetchApi(
+        lifecycle,
+        datasources,
+        todo,
+        maxResultLength,
+      );
+      // check result length
       for (const answer of answers) {
         if (!answer.result) {
+          answer.result = "";
           continue;
         }
         const resultLength = answer.result.length;
         if (resultLength > maxResultLength) {
-          answer.result = undefined;
+          logger.warn(
+            `answer length ${resultLength} is exceed max result length ${maxResultLength}, refactor error result`,
+            {
+              target: "reporter",
+              breads: [
+                targetChain.code,
+                lifecycle.aggregatorId,
+                todo.requestId,
+              ],
+            },
+          );
+          answer.result = "";
           answer.error = `the result is too long, maxLength: ${maxResultLength}, currentLength: ${resultLength}`;
         }
       }
@@ -240,18 +314,33 @@ export class XAPIExporterStarter {
       while (true) {
         times += 1;
         if (times > 3) {
-          logger.warn("failed report 3 times, skipp this round.");
+          logger.warn("failed report 3 times, skipp this round.", {
+            target: "reporter",
+            breads: [targetChain.code, lifecycle.aggregatorId, todo.requestId],
+          });
           break;
         }
+        const report: Report = {
+          request_id: todo.requestId,
+          reward_address: lifecycle.rewardAddress,
+          answers,
+        };
+        let reporteDeposit;
         try {
-          const report: Report = {
-            request_id: todo.requestId,
-            reward_address: lifecycle.rewardAddress,
-            answers,
-          };
-          const reporteDeposit =
-            // @ts-ignore
-            await aggregator.estimate_storage_deposit(report);
+          // @ts-ignore
+          reporteDeposit = await aggregator.estimate_storage_deposit(report);
+          logger.info(`estimated storage deposit: ${reporteDeposit}`, {
+            target: "reporter",
+            breads: [targetChain.code, lifecycle.aggregatorId, todo.requestId],
+          });
+        } catch (e: any) {
+          logger.error(`failed to estimate storage deposit`, {
+            target: "reporter",
+            breads: [targetChain.code, lifecycle.aggregatorId, todo.requestId],
+          });
+          continue;
+        }
+        try {
           // @ts-ignore
           const _reported = await aggregator.report({
             signerAccount: near.nearAccount(),
@@ -262,35 +351,70 @@ export class XAPIExporterStarter {
               BigInt(reporteDeposit),
             ]),
           });
+
+          logger.info(`report successful`, {
+            target: "reporter",
+            breads: [targetChain.code, lifecycle.aggregatorId, todo.requestId],
+          });
           break;
         } catch (e: any) {
-          logger.warning(
-            `failed to report: ${e.message || e.msg || e}, times: ${times}`,
-            {
-              target: "reporter",
-            },
-          );
+          const msg = e.message || e.msg || e.toString();
+          if (msg.indexOf("assertion") >= -1) {
+            logger.info(
+              "report successful, but the requirements have not yet been met and we need to wait for enough other reports to be aggregated.",
+              {
+                target: "reporter",
+                breads: [
+                  targetChain.code,
+                  lifecycle.aggregatorId,
+                  todo.requestId,
+                ],
+              },
+            );
+            break;
+          }
+          logger.warn(`failed to report: ${msg}, times: ${times}`, {
+            target: "reporter",
+            breads: [targetChain.code, lifecycle.aggregatorId, todo.requestId],
+          });
           await setTimeout(2000);
         }
       }
     }
-
-    logger.debug(lifecycle.targetChain.code, {
-      target: "reporter",
-      breads: ["hello", "x"],
-    });
   }
 
   private async fetchApi(
+    lifecycle: ReporterLifecycle,
     datasources: Datasource[],
     todo: RequestMade,
     maxResultLength: number,
   ): Promise<Answer[]> {
     const answers: Answer[] = [];
     for (const ds of datasources) {
+      logger.debug(
+        `datasource: ${JSON.stringify(ds)} and request data is: ${
+          todo.requestData
+        }`,
+        {
+          target: "reporter",
+          breads: [
+            lifecycle.targetChain.code,
+            lifecycle.aggregatorId,
+            todo.requestId,
+          ],
+        },
+      );
       let times = 0;
       while (true) {
         times += 1;
+        logger.info(`(${times}) fetch api for ${ds.name}`, {
+          target: "reporter",
+          breads: [
+            lifecycle.targetChain.code,
+            lifecycle.aggregatorId,
+            todo.requestId,
+          ],
+        });
         try {
           const headers: Record<string, any> = {};
           const axiosOptions: any = {
@@ -299,10 +423,21 @@ export class XAPIExporterStarter {
             url: ds.url,
             headers,
           };
-
+          if (ds.headers) {
+            for (const key of Object.keys(ds.headers)) {
+              headers[key] = ds.headers[key];
+            }
+          }
           if (ds.method.toLowerCase() === "get") {
-            const params = this._mergeData(ds.query_json, todo.requestData);
-            axiosOptions.params = params;
+            if (ds.query_json) {
+              const params = this._mergeData(
+                lifecycle,
+                todo,
+                ds.query_json,
+                todo.requestData,
+              );
+              axiosOptions.params = params;
+            }
             if (ds.body_json) {
               axiosOptions.data = ds.body_json;
             }
@@ -310,7 +445,14 @@ export class XAPIExporterStarter {
             if (ds.query_json) {
               axiosOptions.params = ds.query_json;
             }
-            axiosOptions.data = this._mergeData(ds.body_json, todo.requestData);
+            if (ds.body_json) {
+              axiosOptions.data = this._mergeData(
+                lifecycle,
+                todo,
+                ds.body_json,
+                todo.requestData,
+              );
+            }
           }
 
           const authValue = this._readAuth(ds.auth.value_path);
@@ -335,22 +477,84 @@ export class XAPIExporterStarter {
               axiosOptions.params[queryName] = authValue;
             }
           }
+          const envEnableUnsafeRequestInfo =
+            process.env["XAPI_UNSAFE_SHOW_REQUEST_INFO"];
+          if (
+            envEnableUnsafeRequestInfo === "1" ||
+            envEnableUnsafeRequestInfo === "true"
+          ) {
+            logger.info(JSON.stringify(axiosOptions), {
+              target: "reporter",
+              breads: [
+                lifecycle.targetChain.code,
+                lifecycle.aggregatorId,
+                todo.requestId,
+              ],
+            });
+          } else {
+            logger.info(`${ds.method.toUpperCase()} ${ds.url}`, {
+              target: "reporter",
+              breads: [
+                lifecycle.targetChain.code,
+                lifecycle.aggregatorId,
+                todo.requestId,
+              ],
+            });
+          }
           const response = await axios(axiosOptions);
+          const respData = response.data;
+          let result;
+          if (typeof respData === "string") {
+            result = respData;
+          } else {
+            const extractedValue = ds.result_path
+              ? this._extractValue(respData, ds.result_path)
+              : respData;
+            result = JSON.stringify(extractedValue);
+          }
+          logger.info(`response: ${result}`, {
+            target: "reporter",
+            breads: [
+              lifecycle.targetChain.code,
+              lifecycle.aggregatorId,
+              todo.requestId,
+            ],
+          });
           answers.push({
             data_source_name: ds.name,
-            result: response.data,
+            result,
           });
           break;
         } catch (e: any) {
           logger.warn(
             `failed call api, times ${times} error: ${e.message || e.msg || e}`,
-            { target: "reporter" },
+            {
+              target: "reporter",
+              breads: [
+                lifecycle.targetChain.code,
+                lifecycle.aggregatorId,
+                todo.requestId,
+              ],
+            },
           );
           if (times < 3) {
             await setTimeout(5000);
             continue;
           }
 
+          logger.warn(
+            `failed to call api ${ds.method.toUpperCase()} ${
+              ds.url
+            } many times.`,
+            {
+              target: "reporter",
+              breads: [
+                lifecycle.targetChain.code,
+                lifecycle.aggregatorId,
+                todo.requestId,
+              ],
+            },
+          );
           answers.push({
             data_source_name: ds.name,
             error: Tools.ellipsisText({
@@ -375,7 +579,12 @@ export class XAPIExporterStarter {
     return undefined;
   }
 
-  private _mergeData(first: string, second: string): any | undefined {
+  private _mergeData(
+    lifecycle: ReporterLifecycle,
+    todo: RequestMade,
+    first: any,
+    second: string,
+  ): any | undefined {
     let fv = first,
       sv = second;
     if (typeof fv === "string") {
@@ -384,7 +593,14 @@ export class XAPIExporterStarter {
       } catch (ignore: any) {
         logger.warn(
           `failed to parse data from datasource: ${ignore} will use raw value`,
-          { target: "reporter" },
+          {
+            target: "reporter",
+            breads: [
+              lifecycle.targetChain.code,
+              lifecycle.aggregatorId,
+              todo.requestId,
+            ],
+          },
         );
       }
     }
@@ -393,7 +609,14 @@ export class XAPIExporterStarter {
     } catch (ignore: any) {
       logger.warn(
         `failed to parse data from request made: ${ignore} will use raw value`,
-        { target: "reporter" },
+        {
+          target: "reporter",
+          breads: [
+            lifecycle.targetChain.code,
+            lifecycle.aggregatorId,
+            todo.requestId,
+          ],
+        },
       );
     }
     const tfv = typeof fv;
@@ -464,6 +687,16 @@ export class XAPIExporterStarter {
         }
       }
     });
+  }
+
+  private _extractValue(obj: any, path: string): any {
+    const keys = path.replace(/\[(\w+)\]/g, ".$1").split(".");
+    return keys.reduce((acc, key) => {
+      if (acc && key in acc) {
+        return acc[key];
+      }
+      return undefined;
+    }, obj);
   }
 
   private _bigIntMin(args: any[]) {
