@@ -162,4 +162,13 @@ export class NearI {
     });
   }
 
+  public contractSigner(contractId: string): nearAPI.Contract {
+    return this.contract(contractId, {
+      viewMethods: [
+        'experimental_signature_deposit'
+      ],
+      changeMethods: [],
+      useLocalViewExecution: false,
+    });
+  }
 }
