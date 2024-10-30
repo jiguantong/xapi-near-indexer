@@ -12,7 +12,8 @@ npm run build:offchain
 
 cd ${WORK_PATH}/packages/publisher-client
 
-export XAPI_LOG_LEVEL=debug
-export XAPI_REWRITE_CONSOLE=0
+export XAPI_LOG_FULL=0
+export XAPI_LOG_LEVEL=info
+export XAPI_REWRITE_CONSOLE=1
 
 node dist/main.js $@
