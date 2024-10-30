@@ -1,6 +1,6 @@
 import "reflect-metadata";
 
-import { Command } from "commander";
+import { Command, Option } from "commander";
 import { Container } from "typedi";
 import { StartOptions, XAPIExporterStarter } from "./command/start";
 import { logger } from "@ringdao/xapi-common";
@@ -14,23 +14,16 @@ program.name("xapi-reporter").description("xapi reporter").version("0.0.1");
 program
   .command("start")
   .description("start reporter program")
-  .requiredOption(
-    "--reward-address <char>",
-    "reward address (target chain address)",
-    process.env["XAPI_REWARD_ADDRESS"],
-  )
-  .requiredOption(
-    "--near-account <char>",
-    "near account",
-    process.env["XAPI_NEAR_ACCOUNT"],
-  )
-  .requiredOption(
-    "--near-private-key <char>",
-    "near private key",
-    process.env["XAPI_NEAR_PRIVATE_KEY"],
+  .addOption(new Option("--reward-address <string>", "reward address (target chain address)").env("XAPI_REWARD_ADDRESS"))
+  .addOption(new Option("--near-account <string>", "near account").env("XAPI_NEAR_ACCOUNT"))
+  .addOption(new Option("--near-private-key <string>", "near private key").env("XAPI_NEAR_PRIVATE_KEY"))
+  .option(
+    "-t, --testnet <bool>",
+    "enable testnet mode",
+    false,
   )
   .option(
-    "-m, --minimum-rewards <char>",
+    "-m, --minimum-rewards <string>",
     "minimum rewards, e.g. --minimum-rewards=darwinia:100,crab:100",
     (val: string, items: string[]) => {
       if (!val) return items;
@@ -41,6 +34,14 @@ program
     [],
   )
   .action(async (options) => {
+    if (!options.nearAccount) {
+      logger.error('missing near account, please add --near-account or set env.XAPI_NEAR_ACCOUNT');
+      process.exit(1);
+    }
+    if (!options.nearPrivateKey) {
+      logger.error('missing near account, please add --near-private-key or set env.XAPI_NEAR_PRIVATE_KEY');
+      process.exit(1);
+    }
     logger.info(`=== start reporter client ===`, {
       target: "reporter",
     });
@@ -82,6 +83,7 @@ program
       nearAccount: options.nearAccount,
       nearPrivateKey: options.nearPrivateKey,
       minimumRewards,
+      testnet: options.testnet,
     };
     await c.start(startOptions);
   });

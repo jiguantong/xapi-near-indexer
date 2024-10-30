@@ -34,6 +34,7 @@ export interface StartOptions extends BaseStartOptions {
   nearAccount: string;
   nearPrivateKey: KeyPairString;
   minimumRewards: Record<string, bigint>;
+  testnet: boolean;
 }
 
 export interface ReporterLifecycle extends StartOptions {
@@ -49,8 +50,8 @@ const MAX_REPORTER_DEPOSIT = 100000000000000000000000n;
 export class XAPIExporterStarter {
   private _nearInstance: Record<string, NearI> = {};
   private _aggregatorStakingMap: Record<string, string> = {};
-  private readonly _nearGraphqlEndpoint: string =
-    XAPIConfig.graphql.endpoint("near");
+
+  private _nearGraphqlEndpoint?: string;
 
   constructor(
     private evmGraphqlService: EvmGraphqlService,
@@ -78,10 +79,12 @@ export class XAPIExporterStarter {
   }
 
   async start(options: StartOptions) {
+    this._nearGraphqlEndpoint = XAPIConfig.graphql.endpoint(options.testnet ? "near-testnet" : "near");
+
     while (true) {
       try {
         const aggregators = await this.nearGraphqlService.queryAggregators({
-          endpoint: this._nearGraphqlEndpoint,
+          endpoint: this._nearGraphqlEndpoint!,
         });
 
         for (const aggregator of aggregators) {
@@ -172,7 +175,7 @@ export class XAPIExporterStarter {
 
     const aggregatedEvents =
       await this.nearGraphqlService.queryAggregatedeEvents({
-        endpoint: this._nearGraphqlEndpoint,
+        endpoint: this._nearGraphqlEndpoint!,
         ids: waites.map((item) => item.requestId),
         aggregator: lifecycle.aggregatorId,
       });
