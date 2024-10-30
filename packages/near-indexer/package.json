@@ -8,7 +8,10 @@
     "create": "graph create xapi-near --node https://api.thegraph.com/deploy/",
     "create-local": "graph create xapi-near --node http://127.0.0.1:8020",
     "deploy": "graph deploy --studio xapi-near",
-    "deploy-local": "graph deploy xapi-near --ipfs http://localhost:5001 --node http://127.0.0.1:8020"
+    "deploy-local": "graph deploy xapi-near --ipfs http://localhost:5001 --node http://127.0.0.1:8020",
+    "create:darwinia": "graph create --node https://thegraph-g2.darwinia.network/training/deploy/",
+    "remove:darwinia": "graph remove --node https://thegraph-g2.darwinia.network/training/deploy/",
+    "deploy:darwinia": "graph deploy --node https://thegraph-g2.darwinia.network/training/deploy/ --ipfs https://ipfs.network.thegraph.com"
   },
   "devDependencies": {
     "@graphprotocol/graph-cli": "0.84.0",

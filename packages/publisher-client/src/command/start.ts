@@ -13,6 +13,7 @@ import {
     MpcOptions, XAPIResponse, Signature, PublishChainConfig, RequestMade,
     Aggregator,
 } from "@ringdao/xapi-common";
+import { Decimal } from 'decimal.js';
 import { HelixChain, HelixChainConf } from "@helixbridge/helixconf";
 
 import xapiAbi from "../abis/xapi.abi.json";
@@ -21,6 +22,8 @@ import { Account as NearAccount } from 'near-api-js';
 import { KeyPairString } from "near-api-js/lib/utils";
 
 const homedir = require('os').homedir();
+
+const MINIMUM_AGGREGATOR_NEAR = new Decimal(1);
 
 export interface StartOptions {
     nearAccount: string,
@@ -94,6 +97,7 @@ export class PublisherStarter {
                 await setTimeout(60000);
                 continue;
             }
+
             for (const aggregator of allAggregators) {
                 for (const chainId of aggregator.supported_chains) {
                     const chain = HelixChain.get(chainId);
@@ -102,17 +106,25 @@ export class PublisherStarter {
                         logger.error(`Can't find chain: ${chainId}`, {
                             target: "start"
                         });
+                        await setTimeout(1000);
                         continue;
                     }
                     const near = await this.near(options, chain);
                     const nearEthereum = this.getNearEthClient(chain);
+                    const _lifecycle = { ...options, near, targetChain: chain, nearEthereum, aggregator: aggregator.id, cache: publisherCache };
+
+                    logger.info("------------------------------------------------");
+                    if (!await this.checkAggregatorBalance(aggregator.id, _lifecycle)) {
+                        await setTimeout(1000);
+                        break;
+                    }
 
                     try {
                         logger.info("------------------------------------------------");
                         logger.info(`==== 📞 start config-syncer for ${aggregator.id} [${chain.name}-${chain.id.toString()}] ====`, {
                             target: "config-syncer",
                         });
-                        await this.runConfigSyncer({ ...options, near, targetChain: chain, nearEthereum, aggregator: aggregator.id, cache: publisherCache });
+                        await this.runConfigSyncer(_lifecycle);
                         await setTimeout(1000);
                     } catch (e: any) {
                         logger.error(`run config-syncer errored: ${e.stack || e}`, {
@@ -125,7 +137,7 @@ export class PublisherStarter {
                         logger.info(`==== 📦 start publisher for ${aggregator.id} [${chain.name}-${chain.id.toString()}] ====`, {
                             target: "publisher",
                         });
-                        await this.runPublisher({ ...options, near, targetChain: chain, nearEthereum, aggregator: aggregator.id, cache: publisherCache });
+                        await this.runPublisher(_lifecycle);
                         await setTimeout(1000);
                     } catch (e: any) {
                         logger.error(`run publisher errored: ${e.stack || e}`, {
@@ -151,10 +163,14 @@ export class PublisherStarter {
             await this.nearGraphqlService.queryAggregatedeEvents({
                 endpoint: this._nearGraphqlEndpoint!,
                 ids: nonfulfilled.map((item) => item.requestId),
+                aggregator: lifecycle.aggregator
             });
         const toPublishIds = aggregatedEvents.map(a => a.request_id);
-        logger.info(`==> ${lifecycle.aggregator} [${targetChain.name}-${targetChain.id.toString()}] toPublishIds: [${toPublishIds.length}], ${toPublishIds}`, {
+        logger.info(`==> ${lifecycle.aggregator} [${targetChain.name}-${targetChain.id.toString()}] toPublishIds: [${toPublishIds.length}]`, {
             target: "publisher",
+        });
+        logger.debug(`==> ${lifecycle.aggregator} [${targetChain.name}-${targetChain.id.toString()}] toPublishIds: ${toPublishIds}`, {
+            target: "publisher"
         });
         // 3. Check request status on xapi contract
         for (const aggregated of aggregatedEvents) {
@@ -479,6 +495,55 @@ export class PublisherStarter {
 
     async deriveXAPIAddress(aggregator: string, lifecycle: PublisherLifecycle) {
         return (await lifecycle.nearEthereum.deriveAddress(aggregator, `XAPI-${lifecycle.targetChain.id.toString()}`)).address;
+    }
+
+    async checkAggregatorBalance(aggregator: string, lifecycle: PublisherLifecycle): Promise<boolean> {
+        // @ts-ignore
+        const mpcConfig = await lifecycle.near.contractAggregator(aggregator).get_mpc_config();
+        logger.debug(`===> mpcConfig: ${JSON.stringify(mpcConfig)}`, {
+            target: "check-aggregator-balance",
+        });
+        if (!mpcConfig || !mpcConfig.mpc_contract) {
+            return false;
+        }
+
+        let signerDepositRequired = new Decimal(0);
+        try {
+            // @ts-ignore
+            const _signerDepositRequired = await lifecycle.near.contractSigner(mpcConfig.mpc_contract).experimental_signature_deposit();
+            logger.debug(`===> signerDepositRequired: ${_signerDepositRequired}`, {
+                target: "check-aggregator-balance",
+            });
+            if (_signerDepositRequired) {
+                signerDepositRequired = new Decimal(_signerDepositRequired).div(new Decimal('1000000000000000000000000'));
+                if (BigInt(_signerDepositRequired) > BigInt(mpcConfig.attached_balance)) {
+                    logger.warn(`==== ❌ MpcConfig attached_balance of ${aggregator}: ${mpcConfig.attached_balance} < ${_signerDepositRequired}, break ====`, {
+                        target: "check-aggregator-balance"
+                    });
+                    return false;
+                }
+            }
+        } catch (e) {
+            // @ts-ignore
+            logger.error(`==> Fetch signature_deposit error: ${e.message}`, {
+                target: "check-aggregator-balance"
+            });
+        }
+
+        const aggregatorAccount = new NearAccount(lifecycle.near.near.connection, aggregator);
+        const balance = await aggregatorAccount.getAccountBalance();
+        const availableBalance = new Decimal(balance.available).div(new Decimal('1000000000000000000000000'));
+        if (availableBalance.comparedTo(MINIMUM_AGGREGATOR_NEAR.add(new Decimal(signerDepositRequired))) < 0) {
+            logger.warn(`==== ❌ Avaliable Balance of ${aggregator}: ${availableBalance.toFixed(4)} NEAR < ${MINIMUM_AGGREGATOR_NEAR} NEAR + ${signerDepositRequired} NEAR, break ====`, {
+                target: "check-aggregator-balance"
+            });
+            return false;
+        } else {
+            logger.info(`==== ✅ Avaliable Balance of ${aggregator}: ${availableBalance.toFixed(4)} NEAR >= ${MINIMUM_AGGREGATOR_NEAR} NEAR + ${signerDepositRequired} NEAR ====`, {
+                target: "check-aggregator-balance"
+            });
+            return true;
+        }
     }
 
     getNearEthClient(chain: HelixChainConf): NearEthereum {

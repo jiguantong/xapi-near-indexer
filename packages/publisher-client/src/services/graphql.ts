@@ -17,6 +17,11 @@ export interface QueryWithAggregator extends BasicGraphqlParams {
   aggregator: string,
 }
 
+export interface QueryWithAggregatorIds extends BasicGraphqlParams {
+  aggregator: string,
+  ids: string[]
+}
+
 export interface QueryWithPublishChain extends QueryWithAggregator {
   chainId: string
 }
@@ -107,14 +112,16 @@ export class EvmGraphqlService extends AbstractGraphqlService {
 
 @Service()
 export class NearGraphqlService extends AbstractGraphqlService {
-  async queryAggregatedeEvents(params: QueryWithIds): Promise<XAPIResponse[]> {
+  async queryAggregatedeEvents(params: QueryWithAggregatorIds): Promise<XAPIResponse[]> {
     const query = `
     query QueryAggregatedEvents(
-      ${params.ids ? "$ids: [String]" : ""}
+      $ids: [String]
+      $aggregator: String
     ) {
       aggregatedEvents(
         where: {
-          ${params.ids ? "request_id_in: $ids" : ""}
+          request_id_in: $ids
+          aggregator: $aggregator
         }
       ) {
         valid_reporters
@@ -136,6 +143,7 @@ export class NearGraphqlService extends AbstractGraphqlService {
       query,
       variables: {
         ids: params.ids,
+        aggregator: params.aggregator
       },
     });
     return data["aggregatedEvents"];

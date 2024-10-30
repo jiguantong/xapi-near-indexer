@@ -23,6 +23,7 @@
     "bs58check": "^4.0.0",
     "cacache": "^19.0.1",
     "commander": "^12.1.0",
+    "decimal.js": "^10.4.3",
     "elliptic": "^6.5.7",
     "ethers": "^6.13.3",
     "hash.js": "^1.1.7",
