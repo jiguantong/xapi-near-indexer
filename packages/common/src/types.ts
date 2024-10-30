@@ -48,11 +48,12 @@ export type AuthValuePathString = `env.${string}`;
 export interface Datasource {
   method: string;
   name: string;
-  result_path: ResultPathString;
+  result_path?: ResultPathString;
   url: string;
   auth: DatasourceAuth;
-  body_json: string;
-  query_json: string;
+  body_json?: any;
+  query_json?: any;
+  headers?: Record<string, any>;
 }
 
 export interface DatasourceAuth {
