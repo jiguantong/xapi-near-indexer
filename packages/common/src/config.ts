@@ -10,7 +10,7 @@ const graphqlEndpoint: Record<string, string> = {
     "https://thegraph.darwinia.network/dip7/subgraphs/name/dip7index-crab",
   near: "https://gateway.thegraph.com/api/330a1e1b847db8629cf21717988bbee7/subgraphs/id/8xQbVsestNMUK3vgpsGbJCqugfwpqS7GSbAcmWR21o6Y",
   "near-testnet":
-    "https://gateway.thegraph.com/api/330a1e1b847db8629cf21717988bbee7/subgraphs/id/8xQbVsestNMUK3vgpsGbJCqugfwpqS7GSbAcmWR21o6Y",
+    "https://api.studio.thegraph.com/query/66211/xapi-near/version/latest",
   sepolia:
     "https://api.studio.thegraph.com/query/51152/txapi-sepolia/version/latest",
   // 'darwinia-dvm': 'https://thegraph.darwinia.network/dip7/subgraphs/name/darwinia',
