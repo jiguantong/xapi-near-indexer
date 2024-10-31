@@ -18,11 +18,14 @@ program
     .addOption(new Option("--near-account <string>", "near account").env("XAPI_NEAR_ACCOUNT"))
     .addOption(new Option("--near-private-key <string>", "near private key").env("XAPI_NEAR_PRIVATE_KEY"))
     .option(
-      "-t, --testnet <bool>",
+      "-t, --testnet",
       "enable testnet mode",
       false,
     )
     .action(async (options) => {
+      if (options.testnet) {
+        logger.warn("YOUR ARE RUNNING WITH TESTNET MODE", { target: "reporter" });
+      }
         if (!options.nearAccount) {
           logger.error('missing near account, please add --near-account or set env.XAPI_NEAR_ACCOUNT');
           process.exit(1);
