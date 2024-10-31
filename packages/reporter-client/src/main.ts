@@ -43,9 +43,8 @@ program
     [],
   )
   .action(async (options) => {
-    if (options.testnet) {
-      logger.warn("YOUR ARE RUNNING WITH TESTNET MODE", { target: "reporter" });
-    }
+    logger.warn(`YOUR ARE RUNNING WITH ${chalk.green(options.testnet ? 'TESTNET' : 'MAINNET')} MODE`, { target: "reporter" });
+
     if (!options.nearAccount) {
       logger.error(
         "missing near account, please add --near-account or set env.XAPI_NEAR_ACCOUNT",
