@@ -23,7 +23,7 @@ program
       false,
     )
     .action(async (options) => {
-      logger.warn(`YOUR ARE RUNNING WITH ${options.testnet ? 'TESTNET' : 'MAINNET'} MODE`, { target: "reporter" });
+      logger.warn(`YOUR ARE RUNNING ${options.testnet ? 'TESTNET' : 'MAINNET'} MODE`, { target: "reporter" });
         if (!options.nearAccount) {
           logger.error('missing near account, please add --near-account or set env.XAPI_NEAR_ACCOUNT');
           process.exit(1);

@@ -43,7 +43,7 @@ program
     [],
   )
   .action(async (options) => {
-    logger.warn(`YOUR ARE RUNNING WITH ${chalk.green(options.testnet ? 'TESTNET' : 'MAINNET')} MODE`, { target: "reporter" });
+    logger.warn(`YOUR ARE RUNNING ${chalk.green(options.testnet ? 'TESTNET' : 'MAINNET')} MODE`, { target: "reporter" });
 
     if (!options.nearAccount) {
       logger.error(
