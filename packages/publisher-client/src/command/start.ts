@@ -75,7 +75,7 @@ export class PublisherStarter {
     private nearEthereumMap: Record<string, NearEthereum> = {};
 
     async start(options: StartOptions) {
-      this._nearGraphqlEndpoint = XAPIConfig.graphql.endpoint(options.testnet ? "near-testnet" : "near");
+        this._nearGraphqlEndpoint = XAPIConfig.graphql.endpoint(options.testnet ? "near-testnet" : "near");
 
         const publisherCache = new PublisherStorage(`${homedir}/.xapi-publisher/`);
         while (true) {
@@ -534,12 +534,12 @@ export class PublisherStarter {
         const balance = await aggregatorAccount.getAccountBalance();
         const availableBalance = new Decimal(balance.available).div(new Decimal('1000000000000000000000000'));
         if (availableBalance.comparedTo(MINIMUM_AGGREGATOR_NEAR.add(new Decimal(signerDepositRequired))) < 0) {
-            logger.warn(`==== ❌ Avaliable Balance of ${aggregator}: ${availableBalance.toFixed(4)} NEAR < ${MINIMUM_AGGREGATOR_NEAR} NEAR + ${signerDepositRequired} NEAR, break ====`, {
+            logger.warn(`==== ❌ Avaliable Balance of ${aggregator}: ${availableBalance.toFixed(4)} NEAR < (${MINIMUM_AGGREGATOR_NEAR} + ${signerDepositRequired}) NEAR, break ====`, {
                 target: "check-aggregator-balance"
             });
             return false;
         } else {
-            logger.info(`==== ✅ Avaliable Balance of ${aggregator}: ${availableBalance.toFixed(4)} NEAR >= ${MINIMUM_AGGREGATOR_NEAR} NEAR + ${signerDepositRequired} NEAR ====`, {
+            logger.info(`==== ✅ Avaliable Balance of ${aggregator}: ${availableBalance.toFixed(4)} NEAR >= (${MINIMUM_AGGREGATOR_NEAR} + ${signerDepositRequired}) NEAR ====`, {
                 target: "check-aggregator-balance"
             });
             return true;

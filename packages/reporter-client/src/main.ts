@@ -14,14 +14,23 @@ program.name("xapi-reporter").description("xapi reporter").version("0.0.1");
 program
   .command("start")
   .description("start reporter program")
-  .addOption(new Option("--reward-address <string>", "reward address (target chain address)").env("XAPI_REWARD_ADDRESS"))
-  .addOption(new Option("--near-account <string>", "near account").env("XAPI_NEAR_ACCOUNT"))
-  .addOption(new Option("--near-private-key <string>", "near private key").env("XAPI_NEAR_PRIVATE_KEY"))
-  .option(
-    "-t, --testnet <bool>",
-    "enable testnet mode",
-    false,
+  .addOption(
+    new Option(
+      "--reward-address <string>",
+      "reward address (target chain address)",
+    ).env("XAPI_REWARD_ADDRESS"),
   )
+  .addOption(
+    new Option("--near-account <string>", "near account").env(
+      "XAPI_NEAR_ACCOUNT",
+    ),
+  )
+  .addOption(
+    new Option("--near-private-key <string>", "near private key").env(
+      "XAPI_NEAR_PRIVATE_KEY",
+    ),
+  )
+  .option("-t, --testnet", "enable testnet mode", false)
   .option(
     "-m, --minimum-rewards <string>",
     "minimum rewards, e.g. --minimum-rewards=darwinia:100,crab:100",
@@ -34,12 +43,20 @@ program
     [],
   )
   .action(async (options) => {
+    logger.warn(`YOUR ARE RUNNING ${chalk.green(options.testnet ? 'TESTNET' : 'MAINNET')} MODE`, { target: "reporter" });
+
     if (!options.nearAccount) {
-      logger.error('missing near account, please add --near-account or set env.XAPI_NEAR_ACCOUNT');
+      logger.error(
+        "missing near account, please add --near-account or set env.XAPI_NEAR_ACCOUNT",
+        { target: "reporter" },
+      );
       process.exit(1);
     }
     if (!options.nearPrivateKey) {
-      logger.error('missing near private key, please add --near-private-key or set env.XAPI_NEAR_PRIVATE_KEY');
+      logger.error(
+        "missing near private key, please add --near-private-key or set env.XAPI_NEAR_PRIVATE_KEY",
+        { target: "reporter" },
+      );
       process.exit(1);
     }
     logger.info(`=== start reporter client ===`, {
