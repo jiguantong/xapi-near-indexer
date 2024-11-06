@@ -30,6 +30,7 @@ import chalk = require("chalk");
 export interface BaseStartOptions {}
 
 export interface StartOptions extends BaseStartOptions {
+  aggeratorAddresses: string[];
   rewardAddress: string;
   nearAccount: string;
   nearPrivateKey: KeyPairString;
