@@ -14,28 +14,28 @@ import {
 } from "@ringdao/xapi-common";
 
 export interface QueryWithAggregator extends BasicGraphqlParams {
-  aggregator: string,
+  aggregator: string;
 }
 
 export interface QueryWithAggregatorIds extends BasicGraphqlParams {
-  aggregator: string,
-  ids: string[]
+  aggregator: string;
+  ids: string[];
 }
 
 export interface QueryWithPublishChain extends QueryWithAggregator {
-  chainId: string
+  chainId: string;
 }
 
 export interface QueryWithVersion extends QueryWithAggregator {
-  version: string
+  version: string;
 }
 
 export interface QueryWithChainVersion extends QueryWithPublishChain {
-  version: string
+  version: string;
 }
 
 export interface QueryWithRequestId extends QueryWithAggregator {
-  requestId: string
+  requestId: string;
 }
 
 @Service()
@@ -74,19 +74,21 @@ export class EvmGraphqlService extends AbstractGraphqlService {
       ...params,
       query,
       variables: {
-        aggregator: params.aggregator
-      }
+        aggregator: params.aggregator,
+      },
     });
     return data["requestMades"];
   }
 
-  async queryAggregatorConfig(params: QueryWithVersion): Promise<{ version: string }> {
+  async queryAggregatorConfig(
+    params: QueryWithVersion,
+  ): Promise<{ version: string }> {
     const query = `
     query PublishChainConfigs(
       $version: BigInt
       $aggregator: String
     ) {
-      aggregatorConfigSets(first: 1, 
+      aggregatorConfigSets(first: 1,
         where: {
           version_gte: $version
           aggregator: $aggregator
@@ -103,16 +105,20 @@ export class EvmGraphqlService extends AbstractGraphqlService {
       query,
       variables: {
         version: params.version,
-        aggregator: params.aggregator
+        aggregator: params.aggregator,
       },
     });
-    return data["aggregatorConfigSets"].length == 0 ? null : data["aggregatorConfigSets"][0];
+    return data["aggregatorConfigSets"].length == 0
+      ? null
+      : data["aggregatorConfigSets"][0];
   }
 }
 
 @Service()
 export class NearGraphqlService extends AbstractGraphqlService {
-  async queryAggregatedeEvents(params: QueryWithAggregatorIds): Promise<XAPIResponse[]> {
+  async queryAggregatedeEvents(
+    params: QueryWithAggregatorIds,
+  ): Promise<XAPIResponse[]> {
     const query = `
     query QueryAggregatedEvents(
       $ids: [String]
@@ -143,19 +149,21 @@ export class NearGraphqlService extends AbstractGraphqlService {
       query,
       variables: {
         ids: params.ids,
-        aggregator: params.aggregator
+        aggregator: params.aggregator,
       },
     });
     return data["aggregatedEvents"];
   }
 
-  async queryLatestPublishConfig(params: QueryWithPublishChain): Promise<PublishChainConfig> {
+  async queryLatestPublishConfig(
+    params: QueryWithPublishChain,
+  ): Promise<PublishChainConfig> {
     const query = `
     query PublishChainConfigs(
       $chain_id: BigInt
       $aggregator: String
     ) {
-      setPublishChainConfigEvents(first: 1, 
+      setPublishChainConfigEvents(first: 1,
         where: {
           chain_id: $chain_id
           aggregator: $aggregator
@@ -179,10 +187,12 @@ export class NearGraphqlService extends AbstractGraphqlService {
       query,
       variables: {
         chain_id: params.chainId,
-        aggregator: params.aggregator
+        aggregator: params.aggregator,
       },
     });
-    return data["setPublishChainConfigEvents"].length == 0 ? null : data["setPublishChainConfigEvents"][0];
+    return data["setPublishChainConfigEvents"].length == 0
+      ? null
+      : data["setPublishChainConfigEvents"][0];
   }
 
   async queryAllAggregators(params: BasicGraphqlParams): Promise<Aggregator[]> {
@@ -202,7 +212,9 @@ export class NearGraphqlService extends AbstractGraphqlService {
     return data["aggregators"];
   }
 
-  async queryPublishSignature(params: QueryWithRequestId): Promise<PublishEvent> {
+  async queryPublishSignature(
+    params: QueryWithRequestId,
+  ): Promise<PublishEvent> {
     const query = `
     query PublishEvents(
       $request_id: String
@@ -259,20 +271,22 @@ export class NearGraphqlService extends AbstractGraphqlService {
       query,
       variables: {
         request_id: params.requestId,
-        aggregator: params.aggregator
+        aggregator: params.aggregator,
       },
     });
     return data["publishEvents"].length == 0 ? null : data["publishEvents"][0];
   }
 
-  async querySyncConfigSignature(params: QueryWithChainVersion): Promise<SyncPublishChainConfigEvent> {
+  async querySyncConfigSignature(
+    params: QueryWithChainVersion,
+  ): Promise<SyncPublishChainConfigEvent> {
     const query = `
     query SyncPublishChainConfigEvents(
       $aggregator: String
       $chain_id: BigInt
       $version: BigInt
     ) {
-      syncPublishChainConfigEvents(first: 1, orderBy: id, orderDirection: desc, 
+      syncPublishChainConfigEvents(first: 1, orderBy: id, orderDirection: desc,
         where: {
           aggregator: $aggregator,
           chain_id: $chain_id,
@@ -316,9 +330,11 @@ export class NearGraphqlService extends AbstractGraphqlService {
       variables: {
         chain_id: params.chainId,
         version: params.version,
-        aggregator: params.aggregator
+        aggregator: params.aggregator,
       },
     });
-    return data["syncPublishChainConfigEvents"].length == 0 ? null : data["syncPublishChainConfigEvents"][0];
+    return data["syncPublishChainConfigEvents"].length == 0
+      ? null
+      : data["syncPublishChainConfigEvents"][0];
   }
 }
