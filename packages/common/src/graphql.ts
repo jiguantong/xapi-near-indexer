@@ -34,8 +34,7 @@ export abstract class AbstractGraphqlService {
         },
       });
     } catch (e: any) {
-      logger.error(`[${query.endpoint}]: ${e}`);
-      throw e;
+      throw new Error(`[${query.endpoint}]: ${e}`);
     }
     const { errors, data } = response.data;
     if (errors) {

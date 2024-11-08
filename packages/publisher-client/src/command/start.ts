@@ -47,7 +47,7 @@ export interface PublisherLifecycle extends StartOptions {
 @Service()
 export class PublisherStarter {
   private _nearInstance: Record<string, NearI> = {};
-
+  private _aggregators: Aggregator[] = [];
   private _nearGraphqlEndpoint?: string;
 
   constructor(
@@ -83,19 +83,26 @@ export class PublisherStarter {
     );
 
     const publisherCache = new PublisherStorage(`${homedir}/.xapi-publisher/`);
+    let times = 0;
     while (true) {
-      let allAggregators: Aggregator[] = [];
-      try {
-        allAggregators = await this.nearGraphqlService.queryAllAggregators({
-          endpoint: this._nearGraphqlEndpoint!,
-        });
-      } catch (e) {
-        // @ts-ignore
-        logger.error(`==== Fetch aggregators failed: ${e.message}`, {
-          target: "main",
-        });
+      times += 1;
+      if (times > 10000000000) {
+        times = 0;
       }
-      if (!allAggregators || allAggregators.length == 0) {
+      if (!this._aggregators.length || times % 60 === 0) {
+        try {
+          this._aggregators = await this.nearGraphqlService.queryAggregators({
+            endpoint: this._nearGraphqlEndpoint!,
+            ids: options.aggregatorAddresses,
+          });
+        } catch (e) {
+          // @ts-ignore
+          logger.error(`==== Fetch aggregators failed: ${e.message}`, {
+            target: "main",
+          });
+        }
+      }
+      if (!this._aggregators || this._aggregators.length == 0) {
         logger.info(`==== No aggregators, wait 60 seconds to continue ====`, {
           target: "main",
         });
@@ -103,7 +110,7 @@ export class PublisherStarter {
         continue;
       }
 
-      for (const aggregator of allAggregators) {
+      for (const aggregator of this._aggregators) {
         for (const chainId of aggregator.supported_chains) {
           const chain = HelixChain.get(chainId);
           if (!chain) {

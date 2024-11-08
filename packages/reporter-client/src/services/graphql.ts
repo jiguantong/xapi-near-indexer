@@ -15,16 +15,16 @@ export interface XAPIResponseParams extends QueryWithIds {
 }
 
 export interface QueryWithAggregator extends BasicGraphqlParams {
-  aggregator: string,
+  aggregator: string;
 }
 
 export interface QueryTodoRequestMades extends QueryWithAggregator {
-  minimumRewards: bigint,
+  minimumRewards: bigint;
 }
 
 export interface QueryWithAggregatorIds extends QueryWithIds {
-  aggregator: string,
-  ids: string[]
+  aggregator: string;
+  ids: string[];
 }
 
 @Service()
@@ -75,7 +75,9 @@ export class EvmGraphqlService extends AbstractGraphqlService {
 
 @Service()
 export class NearGraphqlService extends AbstractGraphqlService {
-  async queryAggregatedeEvents(params: QueryWithAggregatorIds): Promise<XAPIResponse[]> {
+  async queryAggregatedeEvents(
+    params: QueryWithAggregatorIds,
+  ): Promise<XAPIResponse[]> {
     const query = `
     query QueryAggregatedEvents(
       $ids: [String]
@@ -111,8 +113,9 @@ export class NearGraphqlService extends AbstractGraphqlService {
   }
 
   async queryAggregators(params: QueryWithIds): Promise<Aggregator[]> {
-    const query = params.ids && params.ids.length
-    ? `
+    const query =
+      params.ids && params.ids.length
+        ? `
     query QueryAggregators($first: Int!, $skip: Int!, $ids: [String!]!) {
       aggregators(
         first: $first,
@@ -126,7 +129,7 @@ export class NearGraphqlService extends AbstractGraphqlService {
       }
     }
     `
-    : `
+        : `
     query QueryAggregators($first: Int!, $skip: Int!) {
       aggregators(first: $first, skip: $skip) {
         supported_chains

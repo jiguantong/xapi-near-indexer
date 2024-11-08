@@ -195,21 +195,50 @@ export class NearGraphqlService extends AbstractGraphqlService {
       : data["setPublishChainConfigEvents"][0];
   }
 
-  async queryAllAggregators(params: BasicGraphqlParams): Promise<Aggregator[]> {
-    const query = `
-    query AllAggregators {
-      aggregators(first: 100) {
-        id
+  async queryAggregators(params: QueryWithIds): Promise<Aggregator[]> {
+    const query =
+      params.ids && params.ids.length
+        ? `
+    query QueryAggregators($first: Int!, $skip: Int!, $ids: [String!]!) {
+      aggregators(
+        first: $first,
+        skip: $skip,
+        where: {
+          id_in: $ids
+        }
+      ) {
         supported_chains
+        id
+      }
+    }
+    `
+        : `
+    query QueryAggregators($first: Int!, $skip: Int!) {
+      aggregators(first: $first, skip: $skip) {
+        supported_chains
+        id
       }
     }
     `;
-    const data = await super.post({
-      ...params,
-      query,
-      variables: {},
-    });
-    return data["aggregators"];
+    const first = 100;
+    let skip = 0;
+    const aggregators: Aggregator[] = [];
+    while (true) {
+      const data = await super.post({
+        ...params,
+        query,
+        variables: {
+          first,
+          skip,
+          ids: params.ids,
+        },
+      });
+      const pd = data["aggregators"];
+      if (!pd || !pd.length) break;
+      aggregators.push(...pd);
+      skip = skip + first;
+    }
+    return aggregators;
   }
 
   async queryPublishSignature(
