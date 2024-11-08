@@ -95,7 +95,7 @@ export class PublisherStarter {
             endpoint: this._nearGraphqlEndpoint!,
             ids: options.aggregatorAddresses,
           });
-        } catch (e) {
+        } catch (e: any) {
           // @ts-ignore
           logger.error(`==== Fetch aggregators failed: ${e.message}`, {
             target: "main",
@@ -406,7 +406,7 @@ export class PublisherStarter {
         ],
         deriveAddress,
       );
-    } catch (e) {
+    } catch (e: any) {
       // @ts-ignore
       logger.error(
         `===> estimate gasLimit error: ${JSON.stringify(e.cause)}, ${
@@ -452,9 +452,9 @@ export class PublisherStarter {
 
     let result;
     try {
-      // @ts-ignore
       result = await lifecycle.near
         .contractAggregator(aggregated.aggregator!)
+        // @ts-ignore
         .publish_external({
           signerAccount: new NearAccount(
             lifecycle.near.near.connection,
@@ -472,7 +472,7 @@ export class PublisherStarter {
           gas: "300000000000000",
           amount: 0,
         });
-    } catch (e) {
+    } catch (e: any) {
       // @ts-ignore
       logger.error(
         `===> publish_external error, try get result from indexer: ${e.message}`,
@@ -519,8 +519,7 @@ export class PublisherStarter {
           result.mpc_options,
           lifecycle,
         );
-      } catch (e) {
-        // @ts-ignore
+      } catch (e: any) {
         logger.error(
           `===> relayMpcTx error: ${JSON.stringify(e.cause)}, ${e.reason}`,
           {
@@ -569,7 +568,7 @@ export class PublisherStarter {
         ],
         deriveAddress,
       );
-    } catch (e) {
+    } catch (e: any) {
       // @ts-ignore
       logger.error(
         `===> estimate gasLimit error: ${JSON.stringify(e.cause)}, ${
@@ -614,9 +613,9 @@ export class PublisherStarter {
 
     let result;
     try {
-      // @ts-ignore
       result = await lifecycle.near
         .contractAggregator(publishChainConfig.aggregator!)
+        // @ts-ignore
         .sync_publish_config_to_remote({
           signerAccount: new NearAccount(
             lifecycle.near.near.connection,
@@ -634,7 +633,7 @@ export class PublisherStarter {
           gas: "300000000000000",
           amount: 0,
         });
-    } catch (e) {
+    } catch (e: any) {
       // @ts-ignore
       logger.error(
         `===> sync_publish_config_to_remote error, try get result from indexer: ${e.message}`,
@@ -687,7 +686,7 @@ export class PublisherStarter {
           result.mpc_options,
           lifecycle,
         );
-      } catch (e) {
+      } catch (e: any) {
         // @ts-ignore
         logger.error(
           `===> relayMpcTx error: ${JSON.stringify(e.cause)}, ${e.reason}`,
@@ -772,9 +771,9 @@ export class PublisherStarter {
     aggregator: string,
     lifecycle: PublisherLifecycle,
   ): Promise<boolean> {
-    // @ts-ignore
     const mpcConfig = await lifecycle.near
       .contractAggregator(aggregator)
+      // @ts-ignore
       .get_mpc_config();
     logger.debug(`===> mpcConfig: ${JSON.stringify(mpcConfig)}`, {
       target: "check-aggregator-balance",
@@ -785,9 +784,9 @@ export class PublisherStarter {
 
     let signerDepositRequired = new Decimal(0);
     try {
-      // @ts-ignore
       const _signerDepositRequired = await lifecycle.near
         .contractSigner(mpcConfig.mpc_contract)
+        // @ts-ignore
         .experimental_signature_deposit();
       logger.debug(`===> signerDepositRequired: ${_signerDepositRequired}`, {
         target: "check-aggregator-balance",
@@ -808,7 +807,7 @@ export class PublisherStarter {
           return false;
         }
       }
-    } catch (e) {
+    } catch (e: any) {
       // @ts-ignore
       logger.error(`==> Fetch signature_deposit error: ${e.message}`, {
         target: "check-aggregator-balance",

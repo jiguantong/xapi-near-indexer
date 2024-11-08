@@ -8,7 +8,7 @@ WORK_PATH=${BIN_PATH}/../
 
 cd ${WORK_PATH}
 
-# npm run build:offchain
+npm run build:offchain
 
 cd ${WORK_PATH}/packages/reporter-client
 
