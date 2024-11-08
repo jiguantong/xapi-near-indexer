@@ -29,6 +29,7 @@ export interface StartOptions {
     nearAccount: string,
     nearPrivateKey: KeyPairString,
     testnet: boolean,
+    aggregatorAddresses: string[];
 }
 
 export interface PublisherLifecycle extends StartOptions {

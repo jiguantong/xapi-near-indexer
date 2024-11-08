@@ -26,11 +26,17 @@ export abstract class AbstractGraphqlService {
     const requestBody = JSON.stringify(options, (key, value) =>
       typeof value === "bigint" ? value.toString() : value,
     );
-    const response = await axios.post(query.endpoint, requestBody, {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
+    let response = null;
+    try {
+      response = await axios.post(query.endpoint, requestBody, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+    } catch (e: any) {
+      logger.error(`[${query.endpoint}]: ${e}`);
+      throw e;
+    }
     const { errors, data } = response.data;
     if (errors) {
       throw new Error(

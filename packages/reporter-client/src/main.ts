@@ -32,8 +32,8 @@ program
   )
   .option("-t, --testnet", "enable testnet mode", false)
   .option(
-    "-a, --aggerator",
-    "enable aggerator address",
+    "-a, --aggregator <string>",
+    "enable aggregator address",
     (val: string, items: string[]) => {
       if (!val) return items;
       const mrs: string[] = val.split(",");
@@ -117,7 +117,7 @@ program
       nearPrivateKey: options.nearPrivateKey,
       minimumRewards,
       testnet: options.testnet,
-      aggeratorAddresses: options.aggerator,
+      aggregatorAddresses: options.aggregator,
     };
     await c.start(startOptions);
   });

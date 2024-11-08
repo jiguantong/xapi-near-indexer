@@ -23,6 +23,17 @@ program
       "enable testnet mode",
       false,
     )
+    .option(
+      "-a, --aggregator <string>",
+      "enable aggregator address",
+      (val: string, items: string[]) => {
+        if (!val) return items;
+        const mrs: string[] = val.split(",");
+        items.push(...mrs);
+        return items;
+      },
+      [],
+    )
     .action(async (options) => {
         logger.warn(`YOUR ARE RUNNING ${chalk.green(options.testnet ? 'TESTNET' : 'MAINNET')} MODE`, { target: "main" });
 
@@ -39,6 +50,7 @@ program
             nearAccount: options.nearAccount,
             nearPrivateKey: options.nearPrivateKey,
             testnet: options.testnet,
+            aggregatorAddresses: options.aggregator,
         });
     });
 

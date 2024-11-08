@@ -110,8 +110,23 @@ export class NearGraphqlService extends AbstractGraphqlService {
     return data["aggregatedEvents"];
   }
 
-  async queryAggregators(params: BasicGraphqlParams): Promise<Aggregator[]> {
-    const query = `
+  async queryAggregators(params: QueryWithIds): Promise<Aggregator[]> {
+    const query = params.ids && params.ids.length
+    ? `
+    query QueryAggregators($first: Int!, $skip: Int!, $ids: [String!]!) {
+      aggregators(
+        first: $first,
+        skip: $skip,
+        where: {
+          id_in: $ids
+        }
+      ) {
+        supported_chains
+        id
+      }
+    }
+    `
+    : `
     query QueryAggregators($first: Int!, $skip: Int!) {
       aggregators(first: $first, skip: $skip) {
         supported_chains
@@ -129,6 +144,7 @@ export class NearGraphqlService extends AbstractGraphqlService {
         variables: {
           first,
           skip,
+          ids: params.ids,
         },
       });
       const pd = data["aggregators"];
