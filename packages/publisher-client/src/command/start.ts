@@ -223,7 +223,7 @@ export class PublisherStarter {
             version: latestConfigFromNear.version
         });
         if (latestConfigFromEvm && latestConfigFromEvm.version >= latestConfigFromNear.version) {
-            logger.info(`==> [${targetChain.name}-${targetChain.id.toString()}] ${lifecycle.aggregator}, near: ${latestConfigFromNear.version} <= evm: ${latestConfigFromEvm?.version}`, {
+            logger.info(`==> [${targetChain.name}-${targetChain.id.toString()}] ${lifecycle.aggregator}, 1-check near: ${latestConfigFromNear.version} <= evm: ${latestConfigFromEvm?.version}`, {
                 target: "config-syncer",
             });
             // No synchronization required
@@ -232,7 +232,10 @@ export class PublisherStarter {
         // 3. Double check chain config state on xapi contract
         const exAggregator = await this.deriveXAPIAddress(lifecycle.aggregator, lifecycle);
         const aggregatorConfigEvm = await lifecycle.nearEthereum.getContractViewFunction(latestConfigFromNear.xapi_address, xapiAbi, "aggregatorConfigs", [exAggregator]);
-        if (aggregatorConfigEvm.version >= latestConfigFromNear.version) {
+        if (aggregatorConfigEvm && aggregatorConfigEvm.version >= latestConfigFromNear.version) {
+            logger.info(`==> [${targetChain.name}-${targetChain.id.toString()}] ${lifecycle.aggregator}, 2-check near: ${latestConfigFromNear.version} <= evm: ${aggregatorConfigEvm?.version}`, {
+                target: "config-syncer",
+            });
             return;
         }
         logger.info(`==> [${targetChain.name}-${targetChain.id.toString()}] ${lifecycle.aggregator}, near: ${latestConfigFromNear.version} > evm: ${latestConfigFromEvm?.version}`, {
