@@ -8,9 +8,9 @@ dataSources:
     name: XAPI
     network: sepolia
     source:
-      address: "0x6D83b038d5bF428a8C3fF34bf1b380b3A2acA6fe"
+      address: "0x7DE29a6ee2d6B1BfC4DE88d278107Cf65261f698"
       abi: XAPI
-      startBlock: 6961265
+      startBlock: 7020836
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7

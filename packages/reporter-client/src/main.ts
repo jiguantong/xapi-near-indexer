@@ -32,6 +32,17 @@ program
   )
   .option("-t, --testnet", "enable testnet mode", false)
   .option(
+    "-a, --aggregator <string>",
+    "enable aggregator address",
+    (val: string, items: string[]) => {
+      if (!val) return items;
+      const mrs: string[] = val.split(",");
+      items.push(...mrs);
+      return items;
+    },
+    [],
+  )
+  .option(
     "-m, --minimum-rewards <string>",
     "minimum rewards, e.g. --minimum-rewards=darwinia:100,crab:100",
     (val: string, items: string[]) => {
@@ -43,7 +54,12 @@ program
     [],
   )
   .action(async (options) => {
-    logger.warn(`YOUR ARE RUNNING ${chalk.green(options.testnet ? 'TESTNET' : 'MAINNET')} MODE`, { target: "reporter" });
+    logger.warn(
+      `YOUR ARE RUNNING ${chalk.green(
+        options.testnet ? "TESTNET" : "MAINNET",
+      )} MODE`,
+      { target: "reporter" },
+    );
 
     if (!options.nearAccount) {
       logger.error(
@@ -101,6 +117,7 @@ program
       nearPrivateKey: options.nearPrivateKey,
       minimumRewards,
       testnet: options.testnet,
+      aggregatorAddresses: options.aggregator,
     };
     await c.start(startOptions);
   });

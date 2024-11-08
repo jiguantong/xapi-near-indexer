@@ -10,6 +10,7 @@ import {
   Report,
   Answer,
   Tools,
+  Aggregator,
 } from "@ringdao/xapi-common";
 
 import axios from "axios";
@@ -30,6 +31,7 @@ import chalk = require("chalk");
 export interface BaseStartOptions {}
 
 export interface StartOptions extends BaseStartOptions {
+  aggregatorAddresses: string[];
   rewardAddress: string;
   nearAccount: string;
   nearPrivateKey: KeyPairString;
@@ -50,7 +52,7 @@ const MAX_REPORTER_DEPOSIT = 100000000000000000000000n;
 export class XAPIExporterStarter {
   private _nearInstance: Record<string, NearI> = {};
   private _aggregatorStakingMap: Record<string, string> = {};
-
+  private _aggregators: Aggregator[] = [];
   private _nearGraphqlEndpoint?: string;
 
   constructor(
@@ -81,13 +83,26 @@ export class XAPIExporterStarter {
   async start(options: StartOptions) {
     this._nearGraphqlEndpoint = XAPIConfig.graphql.endpoint(options.testnet ? "near-testnet" : "near");
 
+    let times = 0;
     while (true) {
+      times += 1;
+      if (times > 10000000000) {
+        times = 0;
+      }
       try {
-        const aggregators = await this.nearGraphqlService.queryAggregators({
-          endpoint: this._nearGraphqlEndpoint!,
-        });
+        if (!this._aggregators.length || times % 20 === 0) {
+          this._aggregators = await this.nearGraphqlService.queryAggregators({
+            endpoint: this._nearGraphqlEndpoint!,
+            ids: options.aggregatorAddresses,
+          });
+          logger.info(`refreshed aggregators: [${this._aggregators.map(item => item.id).join(', ')}]`, {target: "reporter"});
+        }
+        if (!this._aggregators.length) {
+          logger.info('not have any aggregators you focus', {target: "reporter"});
+          await setTimeout(10000);
+        }
 
-        for (const aggregator of aggregators) {
+        for (const aggregator of this._aggregators) {
           for (const supportedChain of aggregator.supported_chains) {
             const chain = HelixChain.get(supportedChain);
             if (!chain) {
@@ -119,7 +134,7 @@ export class XAPIExporterStarter {
                 breads: [chain.code, aggregator.id],
               });
             }
-            await setTimeout(1000);
+            await setTimeout(1000 * 5);
           }
         }
         await setTimeout(5000);
