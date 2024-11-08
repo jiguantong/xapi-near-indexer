@@ -89,7 +89,7 @@ export class PublisherStarter {
       if (times > 10000000000) {
         times = 0;
       }
-      if (!this._aggregators.length || times % 60 === 0) {
+      if (!this._aggregators.length || times % 20 === 0) {
         try {
           this._aggregators = await this.nearGraphqlService.queryAggregators({
             endpoint: this._nearGraphqlEndpoint!,
@@ -121,6 +121,7 @@ export class PublisherStarter {
             await setTimeout(1000);
             continue;
           }
+
           const near = await this.near(options, chain);
           const nearEthereum = this.getNearEthClient(chain);
           const _lifecycle = {
@@ -149,7 +150,7 @@ export class PublisherStarter {
               },
             );
             await this.runConfigSyncer(_lifecycle);
-            await setTimeout(1000);
+            await setTimeout(5000);
           } catch (e: any) {
             logger.error(`run config-syncer errored: ${e.stack || e}`, {
               target: "config-syncer",
@@ -167,14 +168,12 @@ export class PublisherStarter {
               },
             );
             await this.runPublisher(_lifecycle);
-            await setTimeout(1000);
+            await setTimeout(5000);
           } catch (e: any) {
             logger.error(`run publisher errored: ${e.stack || e}`, {
               target: "publisher",
             });
           }
-
-          await setTimeout(1000);
         }
       }
     }

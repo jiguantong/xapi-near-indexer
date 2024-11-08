@@ -90,8 +90,7 @@ export class XAPIExporterStarter {
         times = 0;
       }
       try {
-        // every 60 times (around 5 minutes) to update aggregators
-        if (!this._aggregators.length || times % 60 === 0) {
+        if (!this._aggregators.length || times % 20 === 0) {
           this._aggregators = await this.nearGraphqlService.queryAggregators({
             endpoint: this._nearGraphqlEndpoint!,
             ids: options.aggregatorAddresses,
@@ -135,7 +134,7 @@ export class XAPIExporterStarter {
                 breads: [chain.code, aggregator.id],
               });
             }
-            await setTimeout(1000);
+            await setTimeout(1000 * 5);
           }
         }
         await setTimeout(5000);
