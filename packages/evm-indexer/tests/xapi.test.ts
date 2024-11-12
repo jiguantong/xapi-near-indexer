@@ -26,12 +26,14 @@ describe("Describe entity assertions", () => {
     let rewardAddress = Address.fromString(
       "0x0000000000000000000000000000000000000001"
     )
+    let version = BigInt.fromI32(234)
     let newAggregatorConfigSetEvent = createAggregatorConfigSetEvent(
       exAggregator,
       reportersFee,
       publishFee,
       aggregator,
-      rewardAddress
+      rewardAddress,
+      version
     )
     handleAggregatorConfigSet(newAggregatorConfigSetEvent)
   })
@@ -76,6 +78,12 @@ describe("Describe entity assertions", () => {
       "0xa16081f360e3847006db660bae1c6d1b2e17ec2a-1",
       "rewardAddress",
       "0x0000000000000000000000000000000000000001"
+    )
+    assert.fieldEquals(
+      "AggregatorConfigSet",
+      "0xa16081f360e3847006db660bae1c6d1b2e17ec2a-1",
+      "version",
+      "234"
     )
 
     // More assert options:

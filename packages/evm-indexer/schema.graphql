@@ -32,6 +32,14 @@ type Fulfilled @entity(immutable: true) {
   transactionHash: String!
 }
 
+type Initialized @entity(immutable: true) {
+  id: String!
+  version: BigInt! # uint64
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: String!
+}
+
 type OwnershipTransferStarted @entity(immutable: true) {
   id: String!
   previousOwner: String! # address
@@ -54,9 +62,11 @@ type RequestMade @entity {
   id: String!
   requestId: BigInt! # uint256
   aggregator: String! # string
-  requestData: String! # string
+  requestData_exAggregator: String! # address
+  requestData_callbackFunctionId: String! # String4
+  requestData_buf_buf: String! # String
+  requestData_buf_capacity: BigInt! # uint256
   requester: String! # address
-  exAggregator: String! # address
   reportersFee: BigInt! # uint256
   publishFee: BigInt! # uint256
   blockNumber: BigInt!
@@ -71,6 +81,14 @@ type RewardsWithdrawn @entity(immutable: true) {
   id: String!
   withdrawer: String! # address
   amount: BigInt! # uint256
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: String!
+}
+
+type Upgraded @entity(immutable: true) {
+  id: String!
+  implementation: String! # address
   blockNumber: BigInt!
   blockTimestamp: BigInt!
   transactionHash: String!

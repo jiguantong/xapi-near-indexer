@@ -1,8 +1,8 @@
 {
   "sepolia": {
     "XAPI": {
-      "address": "0x7535409663129A387e3e95fE18b940eaE04C2F25",
-      "startBlock": 6915521
+      "address": "0xB78cbcD4389986Fe4F837d4fD92700543F1080a6",
+      "startBlock": 96558218
     }
   }
 }

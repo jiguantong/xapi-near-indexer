@@ -8,9 +8,9 @@ dataSources:
     name: XAPI
     network: sepolia
     source:
-      address: "0x7DE29a6ee2d6B1BfC4DE88d278107Cf65261f698"
+      address: "0xB78cbcD4389986Fe4F837d4fD92700543F1080a6"
       abi: XAPI
-      startBlock: 7020836
+      startBlock: 96558218
     mapping:
       kind: ethereum/events
       apiVersion: 0.0.7
@@ -19,10 +19,12 @@ dataSources:
         - AggregatorConfigSet
         - AggregatorSuspended
         - Fulfilled
+        - Initialized
         - OwnershipTransferStarted
         - OwnershipTransferred
         - RequestMade
         - RewardsWithdrawn
+        - Upgraded
       abis:
         - name: XAPI
           file: ./abis/XAPI.json
@@ -33,12 +35,16 @@ dataSources:
           handler: handleAggregatorSuspended
         - event: Fulfilled(indexed uint256,(address[],bytes,uint16),indexed uint8)
           handler: handleFulfilled
+        - event: Initialized(uint64)
+          handler: handleInitialized
         - event: OwnershipTransferStarted(indexed address,indexed address)
           handler: handleOwnershipTransferStarted
         - event: OwnershipTransferred(indexed address,indexed address)
           handler: handleOwnershipTransferred
-        - event: RequestMade(indexed uint256,string,string,indexed address,indexed address,uint256,uint256)
+        - event: RequestMade(indexed uint256,string,(address,bytes4,(bytes,uint256)),indexed address,uint256,uint256)
           handler: handleRequestMade
         - event: RewardsWithdrawn(indexed address,uint256)
           handler: handleRewardsWithdrawn
+        - event: Upgraded(indexed address)
+          handler: handleUpgraded
       file: ./src/xapi.ts

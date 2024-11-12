@@ -4,10 +4,12 @@ import {
   AggregatorConfigSet,
   AggregatorSuspended,
   Fulfilled,
+  Initialized,
   OwnershipTransferStarted,
   OwnershipTransferred,
   RequestMade,
-  RewardsWithdrawn
+  RewardsWithdrawn,
+  Upgraded
 } from "../generated/XAPI/XAPI"
 
 export function createAggregatorConfigSetEvent(
@@ -15,7 +17,8 @@ export function createAggregatorConfigSetEvent(
   reportersFee: BigInt,
   publishFee: BigInt,
   aggregator: string,
-  rewardAddress: Address
+  rewardAddress: Address,
+  version: BigInt
 ): AggregatorConfigSet {
   let aggregatorConfigSetEvent = changetype<AggregatorConfigSet>(newMockEvent())
 
@@ -46,6 +49,12 @@ export function createAggregatorConfigSetEvent(
     new ethereum.EventParam(
       "rewardAddress",
       ethereum.Value.fromAddress(rewardAddress)
+    )
+  )
+  aggregatorConfigSetEvent.parameters.push(
+    new ethereum.EventParam(
+      "version",
+      ethereum.Value.fromUnsignedBigInt(version)
     )
   )
 
@@ -101,6 +110,21 @@ export function createFulfilledEvent(
   return fulfilledEvent
 }
 
+export function createInitializedEvent(version: BigInt): Initialized {
+  let initializedEvent = changetype<Initialized>(newMockEvent())
+
+  initializedEvent.parameters = new Array()
+
+  initializedEvent.parameters.push(
+    new ethereum.EventParam(
+      "version",
+      ethereum.Value.fromUnsignedBigInt(version)
+    )
+  )
+
+  return initializedEvent
+}
+
 export function createOwnershipTransferStartedEvent(
   previousOwner: Address,
   newOwner: Address
@@ -150,8 +174,10 @@ export function createOwnershipTransferredEvent(
 export function createRequestMadeEvent(
   requestId: BigInt,
   aggregator: string,
-  requestData: string,
-  requester: Address
+  requestData: ethereum.Tuple,
+  requester: Address,
+  reportersFee: BigInt,
+  publishFee: BigInt
 ): RequestMade {
   let requestMadeEvent = changetype<RequestMade>(newMockEvent())
 
@@ -169,11 +195,23 @@ export function createRequestMadeEvent(
   requestMadeEvent.parameters.push(
     new ethereum.EventParam(
       "requestData",
-      ethereum.Value.fromString(requestData)
+      ethereum.Value.fromTuple(requestData)
     )
   )
   requestMadeEvent.parameters.push(
     new ethereum.EventParam("requester", ethereum.Value.fromAddress(requester))
+  )
+  requestMadeEvent.parameters.push(
+    new ethereum.EventParam(
+      "reportersFee",
+      ethereum.Value.fromUnsignedBigInt(reportersFee)
+    )
+  )
+  requestMadeEvent.parameters.push(
+    new ethereum.EventParam(
+      "publishFee",
+      ethereum.Value.fromUnsignedBigInt(publishFee)
+    )
   )
 
   return requestMadeEvent
@@ -198,4 +236,19 @@ export function createRewardsWithdrawnEvent(
   )
 
   return rewardsWithdrawnEvent
+}
+
+export function createUpgradedEvent(implementation: Address): Upgraded {
+  let upgradedEvent = changetype<Upgraded>(newMockEvent())
+
+  upgradedEvent.parameters = new Array()
+
+  upgradedEvent.parameters.push(
+    new ethereum.EventParam(
+      "implementation",
+      ethereum.Value.fromAddress(implementation)
+    )
+  )
+
+  return upgradedEvent
 }
