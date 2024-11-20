@@ -8,7 +8,7 @@ dataSources:
     name: receipts
     network: near-testnet
     source:
-      # account: 'ormpaggregator.guantong.testnet'
+      # account: 'aggregator.guantong.testnet'
       accounts:
         suffixes:
           - 'guantong.testnet'

@@ -118,8 +118,10 @@ function handleSetPublishChainConfig(logs: string[], blockHeader: near.BlockHead
 
   let setPublishChainConfigEvent = SetPublishChainConfigEvent.load(nanoId);
   if (setPublishChainConfigEvent == null) {
-    setPublishChainConfigEvent = parseSetPublishChainConfig(_eventData, receipt);
+    setPublishChainConfigEvent = parseSetPublishChainConfig(_eventData, nanoId, receipt);
     setPublishChainConfigEvent.save();
+    let publishChainConfig = parseChainConfig(_eventData, receipt);
+    publishChainConfig.save();
     syncAllAggregators(setPublishChainConfigEvent);
   } else {
     log.debug("SetPublishChainConfigEvent event already exists: {}", [nanoId]);
@@ -157,7 +159,7 @@ function handleSyncPublishChainConfig(logs: string[], blockHeader: near.BlockHea
   const _version = _eventData.mustGet("version").toString();
   let publishChainConfig = PublishChainConfig.load(_version);
   if (publishChainConfig == null) {
-    log.error("Can't handleSyncPublishChainConfig, PublishChainConfig does not exist, version: {}", [_version]);
+    log.error("Can't handleSyncPublishChainConfig, publishChainConfig does not exist, version: {}", [_version]);
     return;
   }
 
@@ -270,9 +272,9 @@ function parseChainConfig(chainConfigJson: TypedMap<string, JSONValue>, receipt:
   return chainConfig;
 }
 
-function parseSetPublishChainConfig(chainConfigJson: TypedMap<string, JSONValue>, receipt: near.ActionReceipt): SetPublishChainConfigEvent {
-  log.debug("!!!### parseChainConfig", []);
-  const setPublishChainConfigEvent = new SetPublishChainConfigEvent(chainConfigJson.mustGet("version").toString());
+function parseSetPublishChainConfig(chainConfigJson: TypedMap<string, JSONValue>, nanoId: string, receipt: near.ActionReceipt): SetPublishChainConfigEvent {
+  log.debug("!!!### parseSetChainConfig", []);
+  const setPublishChainConfigEvent = new SetPublishChainConfigEvent(nanoId);
   setPublishChainConfigEvent.chain_id = BigInt.fromString(chainConfigJson.mustGet("chain_id").toString());
   setPublishChainConfigEvent.xapi_address = chainConfigJson.mustGet("xapi_address").toString();
   setPublishChainConfigEvent.reporters_fee = BigInt.fromString(chainConfigJson.mustGet("reporters_fee").toString());
